@@ -33,6 +33,7 @@ class cls_Dictionary : public std::map<std::string,std::string>
     //~cls_Dictionary();
 
     int LoadFile(const std::string& pth); // Read a definition file
+    void Peek(); // Debug utility
 
 }; // 'cls_Dictionary'
 

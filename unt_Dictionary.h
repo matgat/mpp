@@ -27,13 +27,17 @@
 /////////////////////////////////////////////////////////////////////////////
 // Map of macro and their expansion strings /////////////////////////////////
 class cls_Dictionary : public std::map<std::string,std::string>
-{
+{                     typedef std::map<std::string,std::string> inherited;
  public:
     cls_Dictionary();
     //~cls_Dictionary();
 
     int LoadFile(const std::string& pth); // Read a definition file
+
+    void Invert(const bool); // Invert the dictionary (can exclude numbers)
     void Peek(); // Debug utility
+
+    static double ToNum(const std::string&, const bool strict =true); // Number conversion
 
 }; // 'cls_Dictionary'
 

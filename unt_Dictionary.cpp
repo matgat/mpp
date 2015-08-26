@@ -18,10 +18,110 @@ cls_Dictionary::cls_Dictionary()
 //
 //}
 
+//---------------------------------------------------------------------------
+// Invert the dictionary (can exclude numbers)
+void cls_Dictionary::Invert(const bool nonum)
+{
+    std::cout << std::endl << "{Inverting dictionary}" << std::endl;
+    if(nonum) std::cerr << "  Excluding numbers" << std::endl;
+    inherited inv_map;
+    for(auto i=begin(); i!=end(); ++i)
+       {
+        if( nonum )
+           {// Exclude numbers
+            try{ ToNum(i->second); continue; } // Skip the number
+            catch(...) {} // Ok, not a number
+           }
+        // Handle aliases, the correct one must be manually chosen
+        auto has = inv_map.find(i->second);
+        if( has != inv_map.end() )
+             {// Already existing, add the alias
+              //std::cerr << "  Adding alias \'" << i->first << "\' for " << i->second << std::endl;
+              // Add a recognizable placeholder to ease the manual choose
+              if(has->second.find("<CHOOSE:")==std::string::npos) has->second = "<CHOOSE:" + has->second + ">";
+              has->second[has->second.length()-1] = '|'; // *(has->second.rbegin()) = '|';
+              has->second += i->first + ">";
+             }
+        else {
+              auto ins = inv_map.insert( value_type( i->second, i->first ) );
+              if( !ins.second )
+                 {
+                  std::cerr << "  Cannot insert \'" << i->second << "\' !!" << std::endl;
+                 }
+             }
+       }
+   std::cout << "  Now got " << inv_map.size() << " voices from previous " << size() << std::endl;
+   // Finally, assign the inverted dictionary
+   inherited::operator=( inv_map );
+} // 'Invert'
 
 
 //---------------------------------------------------------------------------
-// A simple fast parser
+// Debug utility
+void cls_Dictionary::Peek()
+{
+    int max = 10;
+    for(auto i=begin(); i!=end(); ++i)
+       {
+        std::cout << "  " << i->first << " " << i->second << std::endl;
+        if(--max<0) break;
+       }
+} // 'Peek'
+
+
+
+/*
+//---------------------------------------------------------------------------
+char32_t GetUTF8(std::istream& s)
+{
+    static_assert( sizeof(char32_t)>=4 );
+    char c;
+    if( s.get(c) )
+       {
+        if(c < 0x80)
+           {// 1-byte code
+            return c;
+           }
+        else if(c < 0xC0)
+           { // invalid!
+            return '?';
+           }
+        else if(c < 0xE0)
+           {// 2-byte code
+            char32_t c_utf8 = (c & 0x1F) << 6;
+            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            return c_utf8;
+           }
+        else if(c < 0xF0)
+           {// 3-byte code
+            char32_t c_utf8 = (c & 0x0F) << 12;
+            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
+            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            return c_utf8;
+           }
+        else if(c < 0xF8)
+           {// 4-byte code
+            char32_t c_utf8 = (c & 0x07) << 18;
+            if( s.get(c) ) c_utf8 |= (c & 0x3F) << 12; //else truncated!
+            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
+            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            return c_utf8;
+           }
+       }
+    return EOT;
+} // 'GetUTF8'
+*/
+
+
+/*
+    std::ifstream ifs("input.data");
+    ifs.imbue(std::locale(std::locale(), new tick_is_space()));
+*/
+
+//---------------------------------------------------------------------------
+// A simple fast parser for:
+// #define XXX YYY // comment
+// DEF XXX YYY ; comment
 int cls_Dictionary::LoadFile( const std::string& pth )
 {
     // (0) See syntax (extension)
@@ -38,11 +138,58 @@ int cls_Dictionary::LoadFile( const std::string& pth )
        }
 
     // (2) Parse the file
+    // . Poor man's dealing with UTF-16 encoding:
+    //   Eat BOM if present and ignore null characters
+    //              |   Bytes     | Chars |
+    //--------------|-------------|-------|
+    // UTF-8        | EF BB BF    | ï»¿   |
+    // UTF-16 (BE)  | FE FF       | þÿ    |
+    // UTF-16 (LE)  | FF FE       | ÿþ    |
+    // UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
+    // UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
+    // See first byte
+    char c;
+    if( fin.get(c) )
+       {
+        // UTF-8 BOM
+        if( c=='\xEF' )
+           {// Could be a UTF-8 BOM
+            if( fin.get(c) && c=='\xBB' )
+               {// Seems really a UTF-8 BOM
+                if( fin.get(c) && c=='\xBF' )
+                     {// It's definitely a UTF-8 BOM
+                      std::cerr << "  Eated a UTF-8 BOM (EF BB BF)" << std::endl;
+                     }
+                else std::cerr << "  Eated part of invalid UTF-8 BOM (EF BB)" << std::endl;
+               }
+            else std::cerr << "  Eated part of invalid UTF-8 BOM (EF)" << std::endl;
+           } // UTF-8 BOM
+        // UTF-16/32 (LE) BOM
+        else if( c=='\xFF' )
+            {// Could be a UTF-16/32 (LE) BOM
+             if( fin.get(c) && c=='\xFE' )
+                {// Seems really a UTF-16/32 (LE) BOM
+                 if( fin.get(c) && c=='\x00' )
+                      {// It's quite surely a UTF-32 (LE) BOM
+                       if( fin.get(c) && c=='\x00' )
+                            {// It's definitely a UTF-32 (LE) BOM
+                             std::cerr << "  Eated a UTF-32 (LE) BOM (FF FE 00 00)" << std::endl;
+                            }
+                       else std::cerr << "  Eated part of invalid UTF-32 (LE) BOM (FF FE 00)" << std::endl;
+                      }
+                 else {
+                       std::cerr << "  Eated a UTF-16 (LE) BOM (FF FE)" << std::endl;
+                      }
+                }
+             else std::cerr << "  Eated part of invalid UTF-16/32 (LE) BOM (FF)" << std::endl;
+            }
+       } // Eating BOM
+    // Get the rest
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
-    int issues = 0;
+    int issues=0;
+    int n_def=0; // Number of encountered defines
+    int l=1; // Current line number
     std::string def,exp;
-    int l = 1; // Current line number
-    char c = fin.get();
     while( c != EOF )
        {
         // Unexpected characters
@@ -68,6 +215,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
                 else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
                 else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
                 else if(c=='\n') ++l; // Detect possible line break (empty line)
+                else if(c=='\0') c=fin.get(); // Skip null chars (UTF-16/32 encodings)
                 else {// Garbage
                       ++issues;
                       std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_NEWLINE)" << std::endl;
@@ -155,12 +303,13 @@ int cls_Dictionary::LoadFile( const std::string& pth )
                       std::cerr << "  No expansion defined in line " << l << std::endl;
                      }
                 else {
-                      auto ret = insert( value_type( def, exp ) );
-                      if( !ret.second )
+                      auto ins = insert( value_type( def, exp ) );
+                      if( !ins.second )
                          {
                           ++issues;
-                          std::cerr << "  \'" << ret.first->first << "\' already existed in line " << l << " (was \'" << ret.first->second << "\') " << std::endl;
+                          std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\') " << std::endl;
                          }
+                      else ++n_def;
                      }
                 status = ST_ENDLINE;
                 break;
@@ -184,7 +333,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
        } // 'while(!EOF)'
 
     // (3) Finally
-    std::cout << "  Collected " << size() << " defines in " << l << " lines" << std::endl;
+    std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << size() << std::endl;
     return issues;
 } // 'LoadFile'
 
@@ -237,14 +386,156 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 } // 'LoadFile'
 */
 
+
 //---------------------------------------------------------------------------
-// Debug utility
-void cls_Dictionary::Peek()
+// Strictly convert a (dec) floating point or an (oct/dec/hex) int literal
+double cls_Dictionary::ToNum( const std::string& s, const bool strict )
 {
-    int max = 10;
-    for(auto i=begin(); i!=end(); ++i)
+    if(strict) throw std::runtime_error("bad");
+/*
+    // . Internal variables
+    double m=0; int sm=1; // mantissa and its sign
+    int e=0, se=1; // exponent and its sign
+
+    bool i_found = false; // integer part found
+    bool f_found = false; // fractional part found
+    bool e_found = false; // exponential part found
+    bool expchar_found= false; // exponential character found
+
+    // . Get integer part sign
+    if ( readchar == '-' ) {s = -1; NextChar();}
+    else if ( readchar == '+' ) NextChar(); // s = 1;
+
+    // . Get integer part
+    if ( readchar >= '0' && readchar <= '9' )
        {
-        std::cout << "  " << i->first << " " << i->second << std::endl;
-        if(--max<0) break;
+        i_found = true;
+        do {
+            m = (10.0*m) + (readchar - '0');
+            while ( NextChar() == chThousandSep ); // Skip thousand separator char
+           }
+        while ( readchar >= '0' && readchar <= '9' );
        }
-} // 'Peek'
+
+    // . Get decimal part
+    if ( readchar == chDecimalSep )
+       {
+        NextChar();
+        double k = 0.1; // shift of decimal part
+        if ( readchar >= '0' && readchar <= '9' )
+           {
+            f_found = true;
+            do {
+                m += k*double(readchar - '0');
+                k *= 0.1;
+                NextChar();
+               }
+            while ( readchar >= '0' && readchar <= '9' );
+           }
+       }
+
+    // . Get exponential part
+    if ( readchar == 'E' || readchar == 'e' )
+       {
+        expchar_found = true;
+        NextChar();
+        // sign
+        if ( readchar == '-' ) {se = -1; NextChar();}
+        else if ( readchar == '+' ) NextChar(); // se = 1;
+        // exponent
+        if ( readchar >= '0' && readchar <= '9' )
+           {
+            e_found = true;
+            do {
+                e = (10.0*e) + (readchar - '0');
+                NextChar();
+               }
+            while ( readchar >= '0' && readchar <= '9' );
+           }
+       }
+
+    // . Number finished: encountered a delimiter or no more chars
+    // Calculate value
+    double value;
+
+    if ( i_found || f_found )
+         {
+          if ( e_found ) value = s*m*std::pow10(se*e); // All part given
+          else if ( expchar_found && strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
+          else value = s*m; // no exp part
+         }
+    else {
+          if ( e_found )
+               {
+                value = s*std::pow10(se*e); // Only exponential
+               }
+          else {// No part at all
+                if( strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
+                if(expchar_found) value = 1; // things like 'E,+E,-e,e+,E-,...'
+                else value = mat::NaN; // things like '+,-,,...'
+               }
+         }
+
+    // . Finally
+    return value;
+
+
+    // ReadInt ============================================
+    // . Variables
+    int value = 0;
+    int sign = 1;
+    int base = 10;
+    //static bool strict = true; // Settings
+    //int i_start = Position();
+
+    // . Get sign
+    if ( readchar == '-' ) {sign = -1; NextChar();}
+    else if ( readchar == '+' ) NextChar(); // sign = 1;
+
+    // . Get prefix
+    if ( readchar == '0' ) { base = 8; NextChar(); }
+    if ( readchar == 'x' || readchar == 'X' ) { base = 16; NextChar(); }
+
+    // . Get integer part value
+    TChar offset;
+    switch ( base )
+       {
+        case 8 :
+            offset = '0';
+            while ( NotEnded() )
+               {
+                if ( readchar >= '0' && readchar <= '7' ) value = (base*value) + (readchar - offset);
+                else break;
+                while ( NextChar() == chThousandSep ); // Skip thousand separator char
+               }
+            break;
+
+        case 16 :
+            while ( NotEnded() )
+               {
+                if ( readchar >= '0' && readchar <= '9' ) offset = '0';
+                else if ( readchar >= 'A' && readchar <= 'F' ) offset = 'A' - 10;
+                else if ( readchar >= 'a' && readchar <= 'f' ) offset = 'a' - 10;
+                else break;
+                value = (base*value) + (readchar - offset);
+                while ( NextChar() == chThousandSep ); // Skip thousand separator char
+               }
+            break;
+
+        default : // 10
+            offset = '0';
+            while ( NotEnded() )
+               {
+                if ( readchar >= '0' && readchar <= '9' ) value = (base*value) + (readchar - offset);
+                else break;
+                while ( NextChar() == chThousandSep ); // Skip thousand separator char
+               }
+       }
+
+    // . Number finished: encountered a delimiter or no more chars
+    //if ( !i_found && strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
+
+    // . Finally
+    return sign * value;
+*/
+} // 'ToNum'

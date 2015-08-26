@@ -1,58 +1,12 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-//#include <exception>
 #include <string>
-#include <vector>
+#include <vector> // Used to collect input paths
+//#include <exception>
+//---------------------------------------------------------------------------
 #include "unt_Dictionary.h" // 'cls_Dictionary'
 
-enum {RET_OK=0, RET_ARGERR=1, RET_IOERR=2, RET_DEFERR=2, RET_PRCERR=3 };
-
-//#include <boost/filesystem.hpp>
-
-/*
-wchar_t GetUTF8(const std::istream& s)
-{
-  char c = 0;
-  wchar_t ret = '?';
-  s >> c;
-
-  if(c < 0x80)      // 1-byte code
-    ret = c;
-  else if(c < 0xC0)     // invalid
-    ;
-  else if(c < 0xE0) // 2-byte code
-  {
-    ret =  (c & 0x1F) << 6;    s >> c;
-    ret |= (c & 0x3F);
-  }
-  else if(c < 0xF0)     // 3-byte code
-  {
-    ret =  (c & 0x0F) << 12;   s >> c;
-    ret |= (c & 0x3F) <<  6;   s >> c;
-    ret |= (c & 0x3F);
-  }
-  else if(c < 0xF8)     // 4-byte code
-  {
-    // make sure wchar_t is large enough to hold it
-    if(std::numeric_limits<wchar_t>::max() > 0xFFFF)
-    {
-      ret =  (c & 0x07) << 18;   s >> c;
-      ret |= (c & 0x3F) << 12;   s >> c;
-      ret |= (c & 0x3F) <<  6;   s >> c;
-      ret |= (c & 0x3F);
-    }
-  }
-
-  return ret;
-}
-*/
-
-
-/*
-    std::ifstream ifs("input.data");
-    ifs.imbue(std::locale(std::locale(), new tick_is_space()));
-*/
 
 
 //---------------------------------------------------------------------------
@@ -65,7 +19,7 @@ int Process(std::string& pth, const cls_Dictionary& dict)
 
     // (1) Open input file for read
     std::cout << std::endl << '<' << pth << '>' << std::endl;
-    std::ifstream fin( pth );
+    std::ifstream fin( pth, std::ios::binary );
     if( !fin )
        {
         std::cerr << "  Cannot read the file!" << std::endl;
@@ -75,7 +29,7 @@ int Process(std::string& pth, const cls_Dictionary& dict)
     // (2) Open output file for write
     std::string pth_out = pth + ".tr";
     std::cout << " >> " << pth_out << std::endl;
-    std::ofstream fout( pth_out ); // Overwrite
+    std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
     if( !fout )
        {
         std::cerr << "  Cannot write the output file!" << std::endl;
@@ -84,10 +38,11 @@ int Process(std::string& pth, const cls_Dictionary& dict)
 
     // (3) Parse the file
     enum{ ST_SKIPLINE, ST_SEEK, ST_COLLECT } status = ST_SEEK;
-    int n_tok = 0; // Number of encountered tokens
-    int n_sub = 0; // Number of substitution
+    int n_tok=0, n_sub=0; // Number of encountered tokens and substitutions
     int l = 1; // Current line number
-    std::string tok;
+    std::string tok; // Bag for current token
+    bool skipsub; // Auxiliary to handle '#' for skipping substitution
+    // TODO 2: should deal with encoding?
     char c = fin.get();
     while( c != EOF )
        {
@@ -107,70 +62,92 @@ int Process(std::string& pth, const cls_Dictionary& dict)
 
             case ST_SEEK : // Seek next token
                 if( c=='\n' )
-                   {// Detect possible line break
-                    fout << c;
-                    ++l;
-                    c=fin.get();
-                   }
+                     {// Detect possible line break
+                      fout << c;
+                      ++l;
+                      c=fin.get();
+                     }
                 else if( c<=' ' )
-                   {// Skip control characters
-                    fout << c;
-                    c = fin.get();
-                   }
+                     {// Skip control characters
+                      fout << c;
+                      c = fin.get();
+                     }
                 else if( c=='+' || c=='-' || c=='*' || c=='=' ||
                          c=='(' || c==')' || c=='[' || c==']' ||
                          c=='{' || c=='}' || c=='<' || c=='>' ||
                          c=='.' || c==',' || c==':' ||
-                         c=='!' || c=='&' || c=='|' ||
+                         c=='!' || c=='&' || c=='|' || c=='^' ||
                          c=='\'' || c=='\"' || c=='\\' )
-                   {// Skip operators
-                    fout << c;
-                    c = fin.get();
-                   }
+                     {// Skip operators
+                      fout << c;
+                      c = fin.get();
+                     }
                 else if( c=='/' )
-                   {// Skip division/detect c++ comment line
-                    fout << c;
-                    if( fin.get()=='/' )
-                       {
-                        fout << '/';
-                        c = fin.get();
-                        status = ST_SKIPLINE;
-                       }
-                   }
+                     {// Skip division/detect c++ comment line
+                      fout << c;
+                      if( fin.get()=='/' )
+                         {
+                          fout << '/';
+                          c = fin.get();
+                          status = ST_SKIPLINE;
+                         }
+                     }
                 else if( c==';' )
-                   {// Skip semicolon/detect Fagor comment line
-                    fout << c;
-                    c = fin.get();
-                    status = ST_SKIPLINE;
-                   }
-                else status = ST_COLLECT; // Got a token
+                     {// Skip semicolon/detect Fagor comment line
+                      fout << c;
+                      c = fin.get();
+                      status = ST_SKIPLINE;
+                     }
+                else {// Got a token
+                      // Handle the 'no-substitution' character
+                      if( c=='#' )
+                           {
+                            skipsub = true;
+                            tok = "";
+                           }
+                      else {
+                            skipsub = false;
+                            tok = c; // tok=""; tok+=c;
+                           }
+                      c = fin.get(); // Next
+                      status = ST_COLLECT;
+                     }
                 break;
 
-            case ST_COLLECT : // Collect the token
-                tok = "";
+            case ST_COLLECT : // Collect the rest of the token
                 // The token ends with control chars or operators
                 while( c!=EOF && c>' ' &&
                        c!='+' && c!='-' && c!='*' && c!='=' &&
                        c!='(' && c!=')' && // '[', ']' can be part of the token
                        c!='{' && c!='}' && c!='<' && c!='>' &&
                        c!='.' && c!=',' && c!=':' && c!=';' &&
-                       c!='!' && c!='&' && c!='|' &&
+                       c!='!' && c!='&' && c!='|' && c!='^' &&
                        c!='\'' && c!='\"' && c!='\\' && c!='/' )
                    {
                     tok += c;
                     c = fin.get(); // Next
                    }
+
                 // Use token
                 ++n_tok;
+                // See if it's a defined macro
                 auto def = dict.find(tok);
                 if( def != dict.end() )
-                     {// Got a define, substitute
-                      fout << def->second;
-                      ++n_sub;
+                     {// Got a macro
+                      if(skipsub)
+                           {// Don't substitute, leave out the '#'
+                            fout << tok;
+                           }
+                      else {// Substitute
+                            fout << def->second;
+                            ++n_sub;
+                           }
                      }
                 else {// Not a define, pass as it is
+                      if(skipsub) fout << '#'; // Wasn't a define, re-add the '#'
                       fout << tok;
                      }
+
                 // Finally
                 status = ST_SEEK;
                 break;
@@ -180,12 +157,13 @@ int Process(std::string& pth, const cls_Dictionary& dict)
 
     // (4) Finally
     //fout.flush(); // Ensure to write the disk
-    std::cout << "  Substituted " << n_sub << " defines checking a total of " << n_tok << " tokens" << std::endl;
+    std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines" << std::endl;
     return 0;
 } // 'Process'
 
 
 //---------------------------------------------------------------------------
+enum {RET_OK=0, RET_ARGERR=1, RET_IOERR=2, RET_DEFERR=2, RET_PRCERR=3 };
 int main( int argc, const char* argv[] )
 {
     // (0) Local objects
@@ -195,6 +173,7 @@ int main( int argc, const char* argv[] )
     // (1) Command line arguments
     std::cout << "Running in: " << argv[0] << std::endl;
     bool including = false;
+    bool inv = false;
     for( int i=1; i<argc; ++i )
        {
         //std::cout << i << " " << argv[i] << std::endl;
@@ -208,8 +187,12 @@ int main( int argc, const char* argv[] )
                      return RET_ARGERR;
                     }
               else if( arg[1]=='i' )
-                   {
+                   {// Next path is a definition file to include in the dictionary
                     including = true;
+                   }
+              else if( arg[1]=='x' )
+                   {// Must invert the dictionary
+                    inv = true;
                    }
               else {
                     std::cerr << "!! Unknown command switch " << arg << std::endl;
@@ -228,13 +211,13 @@ int main( int argc, const char* argv[] )
                        }
                    }
               else {
+                    // TODO: corresponding output file name
                     in_files.push_back( arg );
                    }
              }
        }
+    if(inv) dict.Invert(true); // Exclude numbers
     //dict.Peek();
-    //std::cout << "definition of " << "GUARD_VALUE"  << ": " << dict["GUARD_VALUE"] << std::endl;
-    // TODO: invert dict, output file name
 
     // (2) Process the input files
     int issues = 0;

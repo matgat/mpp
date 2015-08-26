@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.3.1, 2015-08-25T17:56:07. -->
+<!-- Written by QtCreator 3.3.1, 2015-08-26T18:00:12. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -227,7 +227,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">mpp</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:C:/Documents and Settings/matteo.gattanini/Documenti/Dev/Qt/mpp/mpp.pro</value>
-    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">-i &quot;C:\Machines\m32-Float\sde\PROG\defvar.h&quot; test.txt</value>
+    <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments">-i &quot;defvar.h&quot; -i &quot;01_DEFINIZIONI.plc&quot;  test.txt</value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.ProFile">mpp.pro</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseDyldImageSuffix">false</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseTerminal">true</value>

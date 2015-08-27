@@ -95,9 +95,11 @@ template<class TChar> class cls_DictParser //////////////////////////////////
         int l=1; // Current line number
         std::string def,exp;
         TChar c = cur_c;
+        // TODO: use a lambda
+        //[&c](std::istream& fin){ char buf[sizeof(TChar)]; fin.read(); }
         if(c==-1) fin >> c;
         while( fin )
-           {
+           {char16_t cc = c;
             // Unexpected characters
             //if(c=='\f') { ++issues; std::cerr << pth << "  Unexpected character formfeed in line " << l << std::endl; }
             //else if(c=='\v') { ++issues; std::cerr << pth << "  Unexpected vertical tab in line " << l << std::endl; }
@@ -236,7 +238,7 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                } // 'switch(status)'
            } // 'while(!EOF)'
         // Finally
-        std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << " char size:" << sizeof(TChar) << std::endl;
+        std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << " (charsize:" << sizeof(TChar) << ")" << std::endl;
         return issues;
        } // 'Parse'
 
@@ -440,7 +442,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
          }
     if( enc == UTF16 )
          {
-          cls_DictParser<char16_t> parser;
+          cls_DictParser<short> parser; // char16_t
           return parser.Parse(*this, fin, c);
          }
     else {

@@ -23,6 +23,9 @@
 // . Types/Constants
     enum EN_ENCODING { ANSI, UTF8, UTF16, UTF32 };
 
+// . Facilities
+    //istream& operator>> (istream& in, char16_t& c) { in >> (short) c; return in; }
+
 // . Functions
     EN_ENCODING CheckBOM(char& c, std::istream& fin, std::ostream* fout =0 );
 

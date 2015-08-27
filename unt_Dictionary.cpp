@@ -1,9 +1,14 @@
-#include "unt_Dictionary.h" // 'cls_Dictionary'
+//---------------------------------------------------------------------------
 //#include <exception>
 #include <cassert> // 'assert'
 #include <iostream> // 'std::cerr'
 #include <fstream> // 'std::ifstream'
-#include <regex> // 'std::regex_iterator'
+//#include <regex> // 'std::regex_iterator'
+#include "unt_PoorMansUnicode.h" // 'CheckBOM'
+//---------------------------------------------------------------------------
+#include "unt_Dictionary.h" // 'cls_Dictionary'
+
+
 
 
 //---------------------------------------------------------------------------
@@ -70,53 +75,339 @@ void cls_Dictionary::Peek()
 
 
 
-/*
-//---------------------------------------------------------------------------
-char32_t GetUTF8(std::istream& s)
+
+
+/////////////////////////////////////////////////////////////////////////////
+// A parser for defines that works with different char sizes
+template<class TChar> class cls_DictParser //////////////////////////////////
 {
-    static_assert( sizeof(char32_t)>=4 );
-    char c;
-    if( s.get(c) )
-       {
-        if(c < 0x80)
-           {// 1-byte code
-            return c;
-           }
-        else if(c < 0xC0)
-           { // invalid!
-            return '?';
-           }
-        else if(c < 0xE0)
-           {// 2-byte code
-            char32_t c_utf8 = (c & 0x1F) << 6;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
-            return c_utf8;
-           }
-        else if(c < 0xF0)
-           {// 3-byte code
-            char32_t c_utf8 = (c & 0x0F) << 12;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
-            return c_utf8;
-           }
-        else if(c < 0xF8)
-           {// 4-byte code
-            char32_t c_utf8 = (c & 0x07) << 18;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) << 12; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
-            return c_utf8;
-           }
+ public:
+    cls_DictParser<TChar>()
+       {// Default constructor
        }
-    return EOT;
-} // 'GetUTF8'
-*/
+    //~cls_DictParser();
+
+    int Parse(cls_Dictionary& dict, std::istream& fin, TChar cur_c =-1)
+       {// Parse file
+        enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
+        int issues=0; // Number of issues of the parsing
+        int n_def=0; // Number of encountered defines
+        int l=1; // Current line number
+        std::string def,exp;
+        TChar c = cur_c;
+        if(c==-1) fin >> c;
+        while( fin )
+           {
+            // Unexpected characters
+            //if(c=='\f') { ++issues; std::cerr << pth << "  Unexpected character formfeed in line " << l << std::endl; }
+            //else if(c=='\v') { ++issues; std::cerr << pth << "  Unexpected vertical tab in line " << l << std::endl; }
+            // According to current status
+            switch( status )
+               {
+                case ST_SKIPLINE : // Skip current line
+                    if( c=='\n' )
+                       {
+                        ++l;
+                        status = ST_NEWLINE;
+                       }
+                    fin >> c; // Next
+                    break;
+
+                case ST_NEWLINE : // See what we have
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') fin >> c; // Skip initial spaces
+                    // Now see what we have
+                    if( c=='#' ) status = ST_DEFINE; // could be a '#define'
+                    else if( c=='D' ) status = ST_DEF; // could be a 'DEF'
+                    else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // TODO: A comment
+                    else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
+                    else if( c=='\n') ++l; // Detect possible line break (empty line)
+                    else {// Garbage
+                          ++issues;
+                          std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_NEWLINE)" << std::endl;
+                          status = ST_SKIPLINE; // Garbage, skip the line
+                         }
+                    fin >> c; // Next
+                    break;
+
+                case ST_DEFINE : // Detect '#define' directive
+                    status = ST_SKIPLINE; // Default: garbage, skip the line
+                    if(          c=='d')
+                    if(fin>>c && c=='e')
+                    if(fin>>c && c=='f')
+                    if(fin>>c && c=='i')
+                    if(fin>>c && c=='n')
+                    if(fin>>c && c=='e')
+                       {// Well now should have a space
+                        fin >> c;
+                        if(c==' ' || c=='\t')
+                           {// Got a define
+                            status = ST_MACRO;
+                            fin >> c; // Next
+                           }
+                       }
+                    // Notify garbage
+                    if(status==ST_SKIPLINE)
+                       {// Garbage
+                        ++issues;
+                        std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEFINE)" << std::endl;
+                       }
+                    break;
+
+                case ST_DEF : // Detect 'DEF' directive
+                    status = ST_SKIPLINE; // Default: garbage, skip the line
+                    if(          c=='E')
+                    if(fin>>c && c=='F')
+                       {// Well now should have a space
+                        fin >> c;
+                        if(c==' ' || c=='\t')
+                           {// Got a define
+                            status = ST_MACRO;
+                            fin >> c; // Next
+                           }
+                       }
+                    // Notify garbage
+                    if(status==ST_SKIPLINE)
+                       {// Garbage
+                        ++issues;
+                        std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEF)" << std::endl;
+                       }
+                    break;
+
+                case ST_MACRO : // Collect the define macro string
+                    while(c==' ' || c=='\t') fin >> c; // Skip spaces
+                    // Collect the macro string
+                    def = "";
+                    // The token ends with control chars or eof
+                    while( c!=EOF && c>' ' )
+                       {
+                        def += c;
+                        fin >> c; // Next
+                       }
+                    if( def.empty() )
+                         {// No macro defined!
+                          ++issues;
+                          std::cerr << "  No macro defined in line " << l << std::endl;
+                          status = ST_ENDLINE;
+                         }
+                    else status = ST_EXP;
+                    break;
+
+                case ST_EXP : // Collect the macro expansion string
+                    while(c==' ' || c=='\t') fin >> c; // Skip spaces
+                    // Collect the expansion string
+                    exp = "";
+                    // The token ends with control chars or eof
+                    while( c!=EOF && c>' ' )
+                       {
+                        exp += c;
+                        fin >> c; // Next
+                       }
+                    if( exp.empty() )
+                         {// No expansion defined!
+                          ++issues;
+                          std::cerr << "  No expansion defined in line " << l << std::endl;
+                         }
+                    else {
+                          auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
+                          if( !ins.second )
+                             {
+                              ++issues;
+                              std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\') " << std::endl;
+                             }
+                          else ++n_def;
+                         }
+                    status = ST_ENDLINE;
+                    break;
+
+                case ST_ENDLINE : // Check the remaining after a macro definition
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') fin >> c; // Skip final spaces
+                    // Now see what we have
+                    if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
+                    else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
+                    else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
+                    else {// Garbage
+                          ++issues;
+                          std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)" << std::endl;
+                          status = ST_SKIPLINE; // Garbage, skip the line
+                         }
+                    fin >> c; // Next
+                    break;
+
+               } // 'switch(status)'
+           } // 'while(!EOF)'
+        // Finally
+        std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << " char size:" << sizeof(TChar) << std::endl;
+        return issues;
+       } // 'Parse'
+
+}; // 'cls_DictParser'
+
+/////////////////////////////////////////////////////////////////////////////
+// A parser specialization for plain 'char'
+template<> class cls_DictParser<char> ///////////////////////////////////////
+{
+ public:
+    cls_DictParser()
+       {// Default constructor
+       }
+    //~cls_DictParser();
+
+    int Parse(cls_Dictionary& dict, std::istream& fin, char& c)
+       {// Parse file
+        enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
+        int issues=0; // Number of issues of the parsing
+        int n_def=0; // Number of encountered defines
+        int l=1; // Current line number
+        std::string def,exp;
+        while( c != EOF )
+           {
+            // Unexpected characters
+            //if(c=='\f') { ++issues; std::cerr << pth << "  Unexpected character formfeed in line " << l << std::endl; }
+            //else if(c=='\v') { ++issues; std::cerr << pth << "  Unexpected vertical tab in line " << l << std::endl; }
+            // According to current status
+            switch( status )
+               {
+                case ST_SKIPLINE : // Skip current line
+                    if( c=='\n' )
+                       {
+                        ++l;
+                        status = ST_NEWLINE;
+                       }
+                    c = fin.get();
+                    break;
+
+                case ST_NEWLINE : // See what we have
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') c=fin.get(); // Skip initial spaces
+                    // Now see what we have
+                    if( c=='#' ) status = ST_DEFINE; // could be a '#define'
+                    else if( c=='D' ) status = ST_DEF; // could be a 'DEF'
+                    else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
+                    else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
+                    else if(c=='\n') ++l; // Detect possible line break (empty line)
+                    //else if(c=='\0') c=fin.get(); // Skip null chars (UTF-16/32 encodings)
+                    else {// Garbage
+                          ++issues;
+                          std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_NEWLINE)" << std::endl;
+                          status = ST_SKIPLINE; // Garbage, skip the line
+                         }
+                    c = fin.get(); // Next
+                    break;
+
+                case ST_DEFINE : // Detect '#define' directive
+                    status = ST_SKIPLINE; // Default: garbage, skip the line
+                    if(            c=='d')
+                    if((c=fin.get())=='e')
+                    if((c=fin.get())=='f')
+                    if((c=fin.get())=='i')
+                    if((c=fin.get())=='n')
+                    if((c=fin.get())=='e')
+                       {// Well now should have a space
+                        c = fin.get();
+                        if(c==' ' || c=='\t')
+                           {// Got a define
+                            status = ST_MACRO;
+                            c = fin.get(); // Next
+                           }
+                       }
+                    // Notify garbage
+                    if(status==ST_SKIPLINE)
+                       {// Garbage
+                        ++issues;
+                        std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEFINE)" << std::endl;
+                       }
+                    break;
+
+                case ST_DEF : // Detect 'DEF' directive
+                    status = ST_SKIPLINE; // Default: garbage, skip the line
+                    if(            c=='E')
+                    if((c=fin.get())=='F')
+                       {// Well now should have a space
+                        c = fin.get();
+                        if(c==' ' || c=='\t')
+                           {// Got a define
+                            status = ST_MACRO;
+                            c = fin.get(); // Next
+                           }
+                       }
+                    // Notify garbage
+                    if(status==ST_SKIPLINE)
+                       {// Garbage
+                        ++issues;
+                        std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEF)" << std::endl;
+                       }
+                    break;
+
+                case ST_MACRO : // Collect the define macro string
+                    while(c==' ' || c=='\t') c=fin.get(); // Skip spaces
+                    // Collect the macro string
+                    def = "";
+                    // The token ends with control chars or eof
+                    while( c!=EOF && c>' ' )
+                       {
+                        def += c;
+                        c = fin.get(); // Next
+                       }
+                    if( def.empty() )
+                         {// No macro defined!
+                          ++issues;
+                          std::cerr << "  No macro defined in line " << l << std::endl;
+                          status = ST_ENDLINE;
+                         }
+                    else status = ST_EXP;
+                    break;
+
+                case ST_EXP : // Collect the macro expansion string
+                    while(c==' ' || c=='\t') c=fin.get(); // Skip spaces
+                    // Collect the expansion string
+                    exp = "";
+                    // The token ends with control chars or eof
+                    while( c!=EOF && c>' ' )
+                       {
+                        exp += c;
+                        c = fin.get(); // Next
+                       }
+                    if( exp.empty() )
+                         {// No expansion defined!
+                          ++issues;
+                          std::cerr << "  No expansion defined in line " << l << std::endl;
+                         }
+                    else {
+                          auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
+                          if( !ins.second )
+                             {
+                              ++issues;
+                              std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\') " << std::endl;
+                             }
+                          else ++n_def;
+                         }
+                    status = ST_ENDLINE;
+                    break;
+
+                case ST_ENDLINE : // Check the remaining after a macro definition
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') c=fin.get(); // Skip final spaces
+                    // Now see what we have
+                    if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
+                    else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
+                    else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
+                    else {// Garbage
+                          ++issues;
+                          std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)" << std::endl;
+                          //char s[256]; fin.getline(s,256); std::cerr << s << std::endl;
+                          status = ST_SKIPLINE; // Garbage, skip the line
+                         }
+                    c = fin.get(); // Next
+                    break;
+
+               } // 'switch(status)'
+           } // 'while(!EOF)'
+        // Finally
+        std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << std::endl;
+        return issues;
+       } // 'Parse'
+
+}; // 'cls_DictParser<char>'
 
 
-/*
-    std::ifstream ifs("input.data");
-    ifs.imbue(std::locale(std::locale(), new tick_is_space()));
-*/
 
 //---------------------------------------------------------------------------
 // A simple fast parser for:
@@ -130,7 +421,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 
     // (1) Open file for read
     std::cout << std::endl << '[' << pth << ']' << std::endl;
-    std::ifstream fin( pth );
+    std::ifstream fin( pth, std::ios::binary );
     if( !fin )
        {
         std::cerr << "  Cannot read the file!" << std::endl;
@@ -138,203 +429,24 @@ int cls_Dictionary::LoadFile( const std::string& pth )
        }
 
     // (2) Parse the file
-    // . Poor man's dealing with UTF-16 encoding:
-    //   Eat BOM if present and ignore null characters
-    //              |   Bytes     | Chars |
-    //--------------|-------------|-------|
-    // UTF-8        | EF BB BF    | ï»¿   |
-    // UTF-16 (BE)  | FE FF       | þÿ    |
-    // UTF-16 (LE)  | FF FE       | ÿþ    |
-    // UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
-    // UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
-    // See first byte
+    // Poor man's dealing with UTF-16 encoding check possible BOM
     char c;
-    if( fin.get(c) )
-       {
-        // UTF-8 BOM
-        if( c=='\xEF' )
-           {// Could be a UTF-8 BOM
-            if( fin.get(c) && c=='\xBB' )
-               {// Seems really a UTF-8 BOM
-                if( fin.get(c) && c=='\xBF' )
-                     {// It's definitely a UTF-8 BOM
-                      std::cerr << "  Eated a UTF-8 BOM (EF BB BF)" << std::endl;
-                     }
-                else std::cerr << "  Eated part of invalid UTF-8 BOM (EF BB)" << std::endl;
-               }
-            else std::cerr << "  Eated part of invalid UTF-8 BOM (EF)" << std::endl;
-           } // UTF-8 BOM
-        // UTF-16/32 (LE) BOM
-        else if( c=='\xFF' )
-            {// Could be a UTF-16/32 (LE) BOM
-             if( fin.get(c) && c=='\xFE' )
-                {// Seems really a UTF-16/32 (LE) BOM
-                 if( fin.get(c) && c=='\x00' )
-                      {// It's quite surely a UTF-32 (LE) BOM
-                       if( fin.get(c) && c=='\x00' )
-                            {// It's definitely a UTF-32 (LE) BOM
-                             std::cerr << "  Eated a UTF-32 (LE) BOM (FF FE 00 00)" << std::endl;
-                            }
-                       else std::cerr << "  Eated part of invalid UTF-32 (LE) BOM (FF FE 00)" << std::endl;
-                      }
-                 else {
-                       std::cerr << "  Eated a UTF-16 (LE) BOM (FF FE)" << std::endl;
-                      }
-                }
-             else std::cerr << "  Eated part of invalid UTF-16/32 (LE) BOM (FF)" << std::endl;
-            }
-       } // Eating BOM
+    EN_ENCODING enc = CheckBOM( c, fin );
     // Get the rest
-    enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
-    int issues=0;
-    int n_def=0; // Number of encountered defines
-    int l=1; // Current line number
-    std::string def,exp;
-    while( c != EOF )
-       {
-        // Unexpected characters
-        //if(c=='\f') { ++issues; std::cerr << pth << "  Unexpected character formfeed in line " << l << std::endl; }
-        //else if(c=='\v') { ++issues; std::cerr << pth << "  Unexpected vertical tab in line " << l << std::endl; }
-        // According to current status
-        switch( status )         
-           {
-            case ST_SKIPLINE : // Skip current line
-                if( c=='\n' )
-                   {
-                    ++l;
-                    status = ST_NEWLINE;
-                   }
-                c = fin.get();
-                break;
-
-            case ST_NEWLINE : // See what we have
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') c=fin.get(); // Skip initial spaces
-                // Now see what we have
-                if( c=='#' ) status = ST_DEFINE; // could be a '#define'
-                else if( c=='D' ) status = ST_DEF; // could be a 'DEF'
-                else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
-                else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
-                else if(c=='\n') ++l; // Detect possible line break (empty line)
-                else if(c=='\0') c=fin.get(); // Skip null chars (UTF-16/32 encodings)
-                else {// Garbage
-                      ++issues;
-                      std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_NEWLINE)" << std::endl;
-                      status = ST_SKIPLINE; // Garbage, skip the line
-                     }
-                c = fin.get(); // Next
-                break;
-
-            case ST_DEFINE : // Detect '#define' directive
-                status = ST_SKIPLINE; // Default: garbage, skip the line
-                if(            c=='d')
-                if((c=fin.get())=='e')
-                if((c=fin.get())=='f')
-                if((c=fin.get())=='i')
-                if((c=fin.get())=='n')
-                if((c=fin.get())=='e')
-                   {// Well now should have a space
-                    c = fin.get();
-                    if(c==' ' || c=='\t')
-                       {// Got a define
-                        status = ST_MACRO;
-                        c = fin.get(); // Next
-                       }
-                   }
-                // Notify garbage
-                if(status==ST_SKIPLINE)
-                   {// Garbage
-                    ++issues;
-                    std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEFINE)" << std::endl;
-                   }
-                break;
-
-            case ST_DEF : // Detect 'DEF' directive
-                status = ST_SKIPLINE; // Default: garbage, skip the line
-                if(            c=='E')
-                if((c=fin.get())=='F')
-                   {// Well now should have a space
-                    c = fin.get();
-                    if(c==' ' || c=='\t')
-                       {// Got a define
-                        status = ST_MACRO;
-                        c = fin.get(); // Next
-                       }
-                   }
-                // Notify garbage
-                if(status==ST_SKIPLINE)
-                   {// Garbage
-                    ++issues;
-                    std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_DEF)" << std::endl;
-                   }
-                break;
-
-            case ST_MACRO : // Collect the define macro string
-                while(c==' ' || c=='\t') c=fin.get(); // Skip spaces
-                // Collect the macro string
-                def = "";
-                // The token ends with control chars or eof
-                while( c!=EOF && c>' ' )
-                   {
-                    def += c;
-                    c = fin.get(); // Next
-                   }
-                if( def.empty() )
-                     {// No macro defined!
-                      ++issues;
-                      std::cerr << "  No macro defined in line " << l << std::endl;
-                      status = ST_ENDLINE;
-                     }
-                else status = ST_EXP;
-                break;
-
-            case ST_EXP : // Collect the macro expansion string
-                while(c==' ' || c=='\t') c=fin.get(); // Skip spaces
-                // Collect the expansion string
-                exp = "";
-                // The token ends with control chars or eof
-                while( c!=EOF && c>' ' )
-                   {
-                    exp += c;
-                    c = fin.get(); // Next
-                   }
-                if( exp.empty() )
-                     {// No expansion defined!
-                      ++issues;
-                      std::cerr << "  No expansion defined in line " << l << std::endl;
-                     }
-                else {
-                      auto ins = insert( value_type( def, exp ) );
-                      if( !ins.second )
-                         {
-                          ++issues;
-                          std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\') " << std::endl;
-                         }
-                      else ++n_def;
-                     }
-                status = ST_ENDLINE;
-                break;
-
-            case ST_ENDLINE : // Check the remaining after a macro definition
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') c=fin.get(); // Skip final spaces
-                // Now see what we have
-                if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
-                else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
-                else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
-                else {// Garbage
-                      ++issues;
-                      std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)" << std::endl;
-                      //char s[256]; fin.getline(s,256); std::cerr << s << std::endl;
-                      status = ST_SKIPLINE; // Garbage, skip the line
-                     }
-                c = fin.get(); // Next
-                break;
-
-           } // 'switch(status)'
-       } // 'while(!EOF)'
-
-    // (3) Finally
-    std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << size() << std::endl;
-    return issues;
+    if( enc == ANSI )
+         {
+          cls_DictParser<char> parser;
+          return parser.Parse(*this, fin, c);
+         }
+    if( enc == UTF16 )
+         {
+          cls_DictParser<char16_t> parser;
+          return parser.Parse(*this, fin, c);
+         }
+    else {
+          std::cerr << "  Cannot handle this encoding!" << std::endl;
+          return 1;
+         }
 } // 'LoadFile'
 
 
@@ -392,6 +504,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 double cls_Dictionary::ToNum( const std::string& s, const bool strict )
 {
     if(strict) throw std::runtime_error("bad");
+    return 0;
 /*
     // . Internal variables
     double m=0; int sm=1; // mantissa and its sign

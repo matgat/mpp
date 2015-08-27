@@ -6,6 +6,7 @@
 //#include <exception>
 //---------------------------------------------------------------------------
 #include "unt_Dictionary.h" // 'cls_Dictionary'
+#include "unt_PoorMansUnicode.h" // 'CheckBOM'
 
 
 
@@ -42,8 +43,15 @@ int Process(std::string& pth, const cls_Dictionary& dict)
     int l = 1; // Current line number
     std::string tok; // Bag for current token
     bool skipsub; // Auxiliary to handle '#' for skipping substitution
-    // TODO 2: should deal with encoding?
-    char c = fin.get();
+    // TODO 5: should deal with encoding, now supporting just 8bit enc
+    char c;
+    EN_ENCODING enc = CheckBOM( c, fin, &fout );
+    if( enc != ANSI )
+       {
+        std::cerr << "  Cannot handle this encoding!" << std::endl;
+        return 1;
+       }
+    // Get the rest
     while( c != EOF )
        {
         //std::cout << c << " line: " << l << " tok:" << tok << " status: " << status << '\n';
@@ -167,6 +175,7 @@ enum {RET_OK=0, RET_ARGERR=1, RET_IOERR=2, RET_DEFERR=2, RET_PRCERR=3 };
 int main( int argc, const char* argv[] )
 {
     // (0) Local objects
+    std::ios_base::sync_with_stdio(false); // Try to have better performance
     cls_Dictionary dict;
     std::vector<std::string> in_files;
 
@@ -227,7 +236,7 @@ int main( int argc, const char* argv[] )
        } // All the input files
     if( issues>0 )
        {
-        std::cerr << std::endl << issues << " issues processing files!" << std::endl;
+        std::cout << std::endl << issues << " issues were found!" << std::endl;
         return RET_PRCERR;
        }
 

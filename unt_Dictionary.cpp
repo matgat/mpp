@@ -86,20 +86,28 @@ template<class TChar> class cls_DictParser //////////////////////////////////
        {// Default constructor
        }
     //~cls_DictParser();
+    static inline std::istream& get(TChar& c, std::istream& in)
+       {
+        const int bufsiz = sizeof(c);
+        static char buf[bufsiz]; // (!) Not thread safe!
+        in.read(buf,bufsiz);
+        // TODO: endiannes
+        c = buf[0];
+        for(int i=1; i<bufsiz; ++i) c |= buf[i] << 8;
+        return in;
+       }
 
-    int Parse(cls_Dictionary& dict, std::istream& fin, TChar cur_c =-1)
+    int Parse(cls_Dictionary& dict, std::istream& fin)
        {// Parse file
         enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
         int issues=0; // Number of issues of the parsing
         int n_def=0; // Number of encountered defines
         int l=1; // Current line number
         std::string def,exp;
-        TChar c = cur_c;
-        // TODO: use a lambda
-        //[&c](std::istream& fin){ char buf[sizeof(TChar)]; fin.read(); }
-        if(c==-1) fin >> c;
+        TChar c;
+        get(c,fin); // could use a lambda: auto getc = [&c,&fin]{ ... };
         while( fin )
-           {char16_t cc = c;
+           {
             // Unexpected characters
             //if(c=='\f') { ++issues; std::cerr << pth << "  Unexpected character formfeed in line " << l << std::endl; }
             //else if(c=='\v') { ++issues; std::cerr << pth << "  Unexpected vertical tab in line " << l << std::endl; }
@@ -112,11 +120,11 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                         ++l;
                         status = ST_NEWLINE;
                        }
-                    fin >> c; // Next
+                    get(c,fin); // Next
                     break;
 
                 case ST_NEWLINE : // See what we have
-                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') fin >> c; // Skip initial spaces
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip initial spaces
                     // Now see what we have
                     if( c=='#' ) status = ST_DEFINE; // could be a '#define'
                     else if( c=='D' ) status = ST_DEF; // could be a 'DEF'
@@ -128,23 +136,23 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                           std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_NEWLINE)" << std::endl;
                           status = ST_SKIPLINE; // Garbage, skip the line
                          }
-                    fin >> c; // Next
+                    get(c,fin); // Next
                     break;
 
                 case ST_DEFINE : // Detect '#define' directive
                     status = ST_SKIPLINE; // Default: garbage, skip the line
                     if(          c=='d')
-                    if(fin>>c && c=='e')
-                    if(fin>>c && c=='f')
-                    if(fin>>c && c=='i')
-                    if(fin>>c && c=='n')
-                    if(fin>>c && c=='e')
+                    if(get(c,fin) && c=='e')
+                    if(get(c,fin) && c=='f')
+                    if(get(c,fin) && c=='i')
+                    if(get(c,fin) && c=='n')
+                    if(get(c,fin) && c=='e')
                        {// Well now should have a space
-                        fin >> c;
+                        get(c,fin);
                         if(c==' ' || c=='\t')
                            {// Got a define
                             status = ST_MACRO;
-                            fin >> c; // Next
+                            get(c,fin); // Next
                            }
                        }
                     // Notify garbage
@@ -157,14 +165,14 @@ template<class TChar> class cls_DictParser //////////////////////////////////
 
                 case ST_DEF : // Detect 'DEF' directive
                     status = ST_SKIPLINE; // Default: garbage, skip the line
-                    if(          c=='E')
-                    if(fin>>c && c=='F')
+                    if(              c=='E')
+                    if(get(c,fin) && c=='F')
                        {// Well now should have a space
-                        fin >> c;
+                        get(c,fin);
                         if(c==' ' || c=='\t')
                            {// Got a define
                             status = ST_MACRO;
-                            fin >> c; // Next
+                            get(c,fin); // Next
                            }
                        }
                     // Notify garbage
@@ -176,14 +184,14 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                     break;
 
                 case ST_MACRO : // Collect the define macro string
-                    while(c==' ' || c=='\t') fin >> c; // Skip spaces
+                    while(c==' ' || c=='\t') get(c,fin); // Skip spaces
                     // Collect the macro string
                     def = "";
                     // The token ends with control chars or eof
                     while( c!=EOF && c>' ' )
                        {
                         def += c;
-                        fin >> c; // Next
+                        get(c,fin); // Next
                        }
                     if( def.empty() )
                          {// No macro defined!
@@ -195,14 +203,14 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                     break;
 
                 case ST_EXP : // Collect the macro expansion string
-                    while(c==' ' || c=='\t') fin >> c; // Skip spaces
+                    while(c==' ' || c=='\t') get(c,fin); // Skip spaces
                     // Collect the expansion string
                     exp = "";
                     // The token ends with control chars or eof
                     while( c!=EOF && c>' ' )
                        {
                         exp += c;
-                        fin >> c; // Next
+                        get(c,fin); // Next
                        }
                     if( exp.empty() )
                          {// No expansion defined!
@@ -214,7 +222,7 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                           if( !ins.second )
                              {
                               ++issues;
-                              std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\') " << std::endl;
+                              std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\', now \'" << exp << "\') " << std::endl;
                              }
                           else ++n_def;
                          }
@@ -222,7 +230,7 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                     break;
 
                 case ST_ENDLINE : // Check the remaining after a macro definition
-                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') fin >> c; // Skip final spaces
+                    while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip final spaces
                     // Now see what we have
                     if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
                     else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
@@ -232,7 +240,7 @@ template<class TChar> class cls_DictParser //////////////////////////////////
                           std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)" << std::endl;
                           status = ST_SKIPLINE; // Garbage, skip the line
                          }
-                    fin >> c; // Next
+                    get(c,fin); // Next
                     break;
 
                } // 'switch(status)'
@@ -442,8 +450,9 @@ int cls_Dictionary::LoadFile( const std::string& pth )
          }
     if( enc == UTF16 )
          {
-          cls_DictParser<short> parser; // char16_t
-          return parser.Parse(*this, fin, c);
+          fin.unget(); // Put back the byte read
+          cls_DictParser<char16_t> parser;
+          return parser.Parse(*this, fin);
          }
     else {
           std::cerr << "  Cannot handle this encoding!" << std::endl;

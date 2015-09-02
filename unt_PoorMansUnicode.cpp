@@ -15,8 +15,9 @@
 //                       | UTF-16 (LE)  | FF FE       | ÿþ    |
 //                       | UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
 //                       | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
-EN_ENCODING CheckBOM( char& c, std::istream& fin, std::ostream* fout  )
+EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout  )
 {
+    char c;
     // See first byte
     if( fin.get(c) )
        {
@@ -35,12 +36,14 @@ EN_ENCODING CheckBOM( char& c, std::istream& fin, std::ostream* fout  )
                         std::cerr << "  Detected part of invalid UTF-8 BOM (EF BB)" << std::endl;
                         //if(fin) fin.unget(); // No, I have already in in 'c'
                         if(fout) *fout << '\xEF' << '\xBB'; // pass it
+                        fin.unget(); // Put back the last byte read
                         return UTF8;
                        }
                  }
             else {
                   std::cerr << "  Detected part of invalid UTF-8 BOM (EF)" << std::endl;
                   if(fout) *fout << '\xEF'; // pass it
+                  fin.unget(); // Put back the last byte read
                   return ANSI;
                  }
            } // UTF-8 BOM
@@ -53,25 +56,28 @@ EN_ENCODING CheckBOM( char& c, std::istream& fin, std::ostream* fout  )
                         {// It's definitely a UTF-16 (LE) BOM
                          std::cerr << "  Detected a UTF-16 (LE) BOM (FF FE)" << std::endl;
                          if(fout) *fout << '\xFF' << '\xFE'; // pass it
-                         return UTF16;
+                         fin.unget(); // Put back the last byte read
+                         return UTF16_LE;
                         }
                    else {// It's quite surely a UTF-32 (LE) BOM
                          if( fin.get(c) && c=='\x00' )
                               {// It's definitely a UTF-32 (LE) BOM
                                std::cerr << "  Detected a UTF-32 (LE) BOM (FF FE 00 00)" << std::endl;
                                if(fout) *fout << '\xFF' << '\xFE' << '\x00' << '\x00'; // pass it
-                               return UTF32;
+                               return UTF32_LE;
                               }
                          else {
                                std::cerr << "  Detected part of invalid UTF-32 (LE) BOM (FF FE 00)" << std::endl;
                                if(fout) *fout << '\xFF' << '\xFE' << '\x00'; // pass it
-                               return UTF16;
+                               //TODO: fin.unget(); // Put back the last byte read
+                               return UTF16_LE;
                               }
                         }
                   }
              else {
                    std::cerr << "  Detected part of invalid UTF-16/32 (LE) BOM (FF)" << std::endl;
-                   if(fout) *fout << '\xFF'; // pass it
+                   //if(fout) *fout << '\xFF'; // pass it
+                   fin.unget(); // Put back the last byte read
                    return ANSI;
                   }
             } // UTF-16/32 (LE) BOM
@@ -82,11 +88,12 @@ EN_ENCODING CheckBOM( char& c, std::istream& fin, std::ostream* fout  )
                   {// It's definitely a UTF-16 (BE) BOM
                    std::cerr << "  Detected a UTF-16 (BE) BOM (FE FF)" << std::endl;
                    if(fout) *fout << '\xFE' << '\xFF'; // pass it
-                   return UTF16;
+                   return UTF16_BE;
                   }
              else {
                    std::cerr << "  Detected part of invalid UTF-16 (BE) BOM (FE)" << std::endl;
                    if(fout) *fout << '\xFE'; // pass it
+                   fin.unget(); // Put back the last byte read
                    return ANSI;
                   }
             } // UTF-16 (BE) BOM
@@ -101,29 +108,34 @@ EN_ENCODING CheckBOM( char& c, std::istream& fin, std::ostream* fout  )
                               {// It's definitely a UTF-32 (BE) BOM
                                std::cerr << "  Detected a UTF-32 (BE) BOM (00 00 FE FF)" << std::endl;
                                if(fout) *fout << '\x00' << '\x00' << '\xFE' << '\xFF'; // pass it
-                               return UTF32;
+                               return UTF32_BE;
                               }
                          else {
                                std::cerr << "  Detected part of invalid UTF-32 (BE) BOM (00 00 FE)" << std::endl;
                                if(fout) *fout << '\x00' << '\x00' << '\xFE'; // pass it
+                               fin.unget(); // Put back the last byte read
                                return ANSI;
                               }
                         }
                    else {
                          std::cerr << "  Detected part of invalid UTF-32 (BE) BOM (00 00)" << std::endl;
                          if(fout) *fout << '\x00' << '\x00'; // pass it
+                         fin.unget(); // Put back the last byte read
                          return ANSI;
                         }
                   }
              else {
                    std::cerr << "  Detected part of invalid UTF-32 (BE) BOM (00)" << std::endl;
                    if(fout) *fout << '\x00'; // pass it
+                   fin.unget(); // Put back the last byte read
                    return ANSI;
                   }
             } // UTF-32 (BE) BOM
        } // Checking first byte
+    // If here, no BOM detected
+    fin.unget(); // Put back the last byte read
     return ANSI;
-}
+} // 'CheckBOM'
 
 
 

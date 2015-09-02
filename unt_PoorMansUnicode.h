@@ -21,13 +21,13 @@
     ---------------------------------------------     */
 
 // . Types/Constants
-    enum EN_ENCODING { ANSI, UTF8, UTF16, UTF32 };
+    enum EN_ENCODING { ANSI, UTF8, UTF16_LE, UTF16_BE, UTF32_LE, UTF32_BE };
 
 // . Facilities
     //istream& operator>> (istream& in, char16_t& c) { in >> (short) c; return in; }
 
 // . Functions
-    EN_ENCODING CheckBOM(char& c, std::istream& fin, std::ostream* fout =0 );
+    EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout =0 );
 
 
 #endif // 'UNT_POORMANSUNICODE_H'

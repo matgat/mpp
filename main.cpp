@@ -44,14 +44,14 @@ int Process(std::string& pth, const cls_Dictionary& dict)
     std::string tok; // Bag for current token
     bool skipsub; // Auxiliary to handle '#' for skipping substitution
     // TODO 5: should deal with encoding, now supporting just 8bit enc
-    char c;
-    EN_ENCODING enc = CheckBOM( c, fin, &fout );
+    EN_ENCODING enc = CheckBOM( fin, &fout );
     if( enc != ANSI )
        {
         std::cerr << "  Cannot handle this encoding!" << std::endl;
         return 1;
        }
     // Get the rest
+    char c = fin.get();
     while( c != EOF )
        {
         //std::cout << c << " line: " << l << " tok:" << tok << " status: " << status << '\n';

@@ -9,8 +9,8 @@ SOURCES += main.cpp \
     unt_PoorMansUnicode.cpp \
     unt_MatUts.cpp
 
-include(deployment.pri)
-qtcAddDeployment()
+#include(deployment.pri)
+#qtcAddDeployment()
 
 HEADERS += \
     unt_Dictionary.h \

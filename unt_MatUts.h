@@ -24,11 +24,11 @@
 namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 {
  
-    double ToNum(const std::string&, const bool strict =true); // Number conversion 
+    double ToNum(const std::string&, const bool strict =true); // Number conversion
     
     //-----------------------------------------------------------------------
     // Lowercase conversion (fails with UTF8!)
-    std::string& strtolower(std::string& s)
+    inline std::string& strtolower(std::string& s)
        {
         for(size_t i=0, imax=s.length(); i<imax; ++i) s[i] = tolower(s[i]);
         return s;
@@ -36,7 +36,7 @@ namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
     //-----------------------------------------------------------------------
     // Tell if a string is a base 10 integer number
-    bool is_index(const std::string& s)
+    inline bool is_index(const std::string& s)
        {
         if( s.empty() ) return false;
         for(size_t i=0; i<s.length(); ++i) if( s[i]<'0' || s[i]>'9' ) return false;

@@ -1,9 +1,10 @@
-//#include <exception>
+//#include <stdexcept> // 'std::runtime_error'
 #include <cassert> // 'assert'
 #include <iostream> // 'std::cerr'
 #include <fstream> // 'std::ifstream'
 //#include <regex> // 'std::regex_iterator'
 #include "unt_PoorMansUnicode.h" // 'CheckBOM'
+#include "unt_MatUts.h" // 'mat::ToNum'
 //---------------------------------------------------------------------------
 #include "unt_Dictionary.h" // 'cls_Dictionary'
 
@@ -13,7 +14,6 @@
 //---------------------------------------------------------------------------
 cls_Dictionary::cls_Dictionary()
 {
-
 }
 
 //---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ void cls_Dictionary::Invert(const bool nonum)
        {
         if( nonum )
            {// Exclude numbers
-            try{ ToNum(i->second); continue; } // Skip the number
+            try{ mat::ToNum(i->second); continue; } // Skip the number
             catch(...) {} // Ok, not a number
            }
         // Handle aliases, the correct one must be manually chosen
@@ -171,15 +171,6 @@ template<> class fun_ReadChar<char> /////////////////////////////////////////
        }
 }; // 'fun_ReadChar'
 
-
-//---------------------------------------------------------------------------
-// Tell if a string is an index
-bool is_index(const std::string& s)
-{
-    if( s.empty() ) return false;
-    for(size_t i=0; i<s.length(); ++i) if( s[i]<'0' || s[i]>'9' ) return false;
-    return true;    
-} // 'is_index'
 
 //---------------------------------------------------------------------------
 // A parser for c-like '#define' directives
@@ -425,7 +416,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                       if(p==0)
                          {
                           std::string idx = exp.substr( prfx.length() );
-                          if( is_index(idx) )
+                          if( mat::is_index(idx) )
                              {
                               exp = "V.PLC." + prfx + "[" + idx + "]";
                              }
@@ -466,13 +457,6 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
 
 
 //---------------------------------------------------------------------------
-std::string& strtolower(std::string& s)
-{
-    for(size_t i=0, imax=s.length(); i<imax; ++i) s[i] = tolower(s[i]);
-    return s;
-}
-
-//---------------------------------------------------------------------------
 // A simple fast parser for:
 // #define XXX YYY // comment
 // DEF XXX YYY ; comment
@@ -489,7 +473,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 
     // (1) See syntax (extension) and parse
     std::string ext( pth.find_last_of(".")!=std::string::npos ? pth.substr(pth.find_last_of(".")+1) : "" );
-    strtolower(ext);
+    mat::strtolower(ext);
     bool fagor = ext=="plc";
     //std::cerr << "  Parsing as: Fagor DEF (." << ext << ")\n";
 
@@ -577,173 +561,4 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 */
 
 
-//---------------------------------------------------------------------------
-// Strictly convert a (dec) floating point or an (oct/dec/hex) int literal
-double cls_Dictionary::ToNum( const std::string& s, const bool strict )
-{
-    if(strict) throw std::runtime_error("bad");
-    return 0;
 
-
-    size_t i=0, len=s.length(); // current character
-    if( len<=0) if(strict) throw std::runtime_error("Invalid number (empty string)");
-
-    // . Detect if strict integer
-    std::string::size_type p = s.find_first_of(".eE")
-    if( p==std::string::npos )
-         {
-          // . Detect sign if present
-          int sgn = 1;
-          if( s[i]=='-' ) {sgn = -1; ++i;}
-          else if( s[i]=='+' ) ++i;
-
-          // . Detect base (prefix)
-          int base = 10;
-          //if( len<=i ) if(strict) throw std::runtime_error("Invalid number: " + s);
-          if( s[i] == '0' ) { base = 8; ++i; }
-          if( s[i] == 'x' || s[i] == 'X' ) { base = 16; ++i; }
-
-          // . Get integer value
-          int value = 0;
-          TChar offset;
-          switch ( base )
-             {
-              case 8 :
-                  offset = '0';
-                  while ( NotEnded() )
-                     {
-                      if ( s[i] >= '0' && s[i] <= '7' ) value = (base*value) + (s[i] - offset);
-                      else break;
-                      while ( NextChar() == chThousandSep ); // Skip thousand separator char
-                     }
-                  break;
-
-              case 16 :
-                  while ( NotEnded() )
-                     {
-                      if ( s[i] >= '0' && s[i] <= '9' ) offset = '0';
-                      else if ( s[i] >= 'A' && s[i] <= 'F' ) offset = 'A' - 10;
-                      else if ( s[i] >= 'a' && s[i] <= 'f' ) offset = 'a' - 10;
-                      else break;
-                      value = (base*value) + (s[i] - offset);
-                      while ( NextChar() == chThousandSep ); // Skip thousand separator char
-                     }
-                  break;
-
-              default : // 10
-                  offset = '0';
-                  while ( NotEnded() )
-                     {
-                      if ( s[i] >= '0' && s[i] <= '9' ) value = (base*value) + (s[i] - offset);
-                      else break;
-                      while ( NextChar() == chThousandSep ); // Skip thousand separator char
-                     }
-             }
-
-          // . Number finished: encountered a delimiter or no more chars
-          //if ( !i_found && strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
-
-          // . Finally
-          return sign * value;
-
-         }
-    else {
-         }
-
-
-
-
-/*
-    // . Internal variables
-    double m=0; int sm=1; // mantissa and its sign
-    int e=0, se=1; // exponent and its sign
-
-    bool i_found = false; // integer part found
-    bool f_found = false; // fractional part found
-    bool e_found = false; // exponential part found
-    bool expchar_found= false; // exponential character found
-
-
-
-
-          // . Detect sign if present
-          double sgn = 1.0;
-          if( s[i]=='-' ) {sgn = -1.0; ++i;}
-          else if( s[i]=='+' ) ++i;
-
-    // . Get integer part
-    if ( s[i] >= '0' && s[i] <= '9' )
-       {
-        i_found = true;
-        do {
-            m = (10.0*m) + (s[i] - '0');
-            while ( NextChar() == chThousandSep ); // Skip thousand separator char
-           }
-        while ( s[i] >= '0' && s[i] <= '9' );
-       }
-
-    // . Get decimal part
-    if ( s[i] == chDecimalSep )
-       {
-        ++i;
-        double k = 0.1; // shift of decimal part
-        if ( s[i] >= '0' && s[i] <= '9' )
-           {
-            f_found = true;
-            do {
-                m += k*double(s[i] - '0');
-                k *= 0.1;
-                ++i;
-               }
-            while ( s[i] >= '0' && s[i] <= '9' );
-           }
-       }
-
-    // . Get exponential part
-    if ( s[i] == 'E' || s[i] == 'e' )
-       {
-        expchar_found = true;
-        ++i;
-        // sign
-        if ( s[i] == '-' ) {se = -1; ++i;}
-        else if ( s[i] == '+' ) ++i; // se = 1;
-        // exponent
-        if ( s[i] >= '0' && s[i] <= '9' )
-           {
-            e_found = true;
-            do {
-                e = (10.0*e) + (s[i] - '0');
-                ++i;
-               }
-            while ( s[i] >= '0' && s[i] <= '9' );
-           }
-       }
-
-    // . Number finished: encountered a delimiter or no more chars
-    // Calculate value
-    double value;
-
-    if ( i_found || f_found )
-         {
-          if ( e_found ) value = s*m*std::pow10(se*e); // All part given
-          else if ( expchar_found && strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
-          else value = s*m; // no exp part
-         }
-    else {
-          if ( e_found )
-               {
-                value = s*std::pow10(se*e); // Only exponential
-               }
-          else {// No part at all
-                if( strict ) throw EParsingError("Invalid number", cls_ParseRegion(i_start,Position(),Line(),Col()));
-                if(expchar_found) value = 1; // things like 'E,+E,-e,e+,E-,...'
-                else value = mat::NaN; // things like '+,-,,...'
-               }
-         }
-
-    // . Finally
-    return value;
-
-
-*/
-} // 'ToNum'

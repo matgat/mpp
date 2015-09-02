@@ -36,8 +36,6 @@ class cls_Dictionary : public std::map<std::string,std::string>
     void Invert(const bool); // Invert the dictionary (can exclude numbers)
     void Peek(); // Debug utility
 
-    static double ToNum(const std::string&, const bool strict =true); // Number conversion
-
 }; // 'cls_Dictionary'
 
 

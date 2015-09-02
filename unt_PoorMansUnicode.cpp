@@ -1,4 +1,3 @@
-//---------------------------------------------------------------------------
 //#include <exception>
 #include <cassert> // 'assert'
 #include <iostream> // 'std::cerr'

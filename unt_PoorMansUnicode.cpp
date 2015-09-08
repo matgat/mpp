@@ -14,7 +14,7 @@
 //                       | UTF-16 (LE)  | FF FE       | ÿþ    |
 //                       | UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
 //                       | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
-EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout  )
+EN_ENCODING nms_Mat::CheckBOM( std::istream& fin, std::ostream* fout )
 {
     char c;
     // See first byte
@@ -138,47 +138,49 @@ EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout  )
 
 
 
-/*
+
 //---------------------------------------------------------------------------
-char32_t GetUTF8(std::istream& s)
+// Extract an UTF8 character from byte stream
+char32_t nms_Mat::GetUTF8( std::istream& in )
 {
-    static_assert( sizeof(char32_t)>=4 );
-    char c;
-    if( s.get(c) )
+    //static_assert( sizeof(char32_t)>=4, "" ); // #include <type_traits>?
+    char c; // std::istream::char_type
+    if( in.get(c) )
        {
-        if(c < 0x80)
+        //if( c<'\x80' )
+        if( c<'\x80' )
            {// 1-byte code
             return c;
            }
-        else if(c < 0xC0)
+        else if( c<'\xC0' )
            { // invalid!
             return '?';
            }
-        else if(c < 0xE0)
+        else if( c<'\xE0' )
            {// 2-byte code
-            char32_t c_utf8 = (c & 0x1F) << 6;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            char32_t c_utf8 = (c & '\x1F') << 6;
+            if( in.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
             return c_utf8;
            }
-        else if(c < 0xF0)
+        else if( c<'\xF0' )
            {// 3-byte code
-            char32_t c_utf8 = (c & 0x0F) << 12;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            char32_t c_utf8 = (c & '\x0F') << 12;
+            if( in.get(c) ) c_utf8 |= (c & '\x3F') <<  6; //else truncated!
+            if( in.get(c) ) c_utf8 |= (c & '\x3F'); //else truncated!
             return c_utf8;
            }
-        else if(c < 0xF8)
+        else if( c<'\xF8' )
            {// 4-byte code
-            char32_t c_utf8 = (c & 0x07) << 18;
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) << 12; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
-            if( s.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            char32_t c_utf8 = (c & '\x07') << 18;
+            if( in.get(c) ) c_utf8 |= (c & '\x3F') << 12; //else truncated!
+            if( in.get(c) ) c_utf8 |= (c & '\x3F') <<  6; //else truncated!
+            if( in.get(c) ) c_utf8 |= (c & '\x3F'); //else truncated!
             return c_utf8;
            }
        }
-    return EOT;
+    return EOF;
 } // 'GetUTF8'
-*/
+
 
 
 /*
@@ -186,3 +188,62 @@ char32_t GetUTF8(std::istream& s)
     ifs.imbue(std::locale(std::locale(), new tick_is_space()));
 */
 
+
+
+/*
+
+#include <iostream>
+#include <string>
+#include <locale>
+std::string Convert(std::string& str)
+{
+    std::locale settings;
+    std::string converted;
+
+    for(short i = 0; i < str.size(); ++i)
+        converted += (std::toupper(str[i], settings));
+
+    return converted;
+}
+int main()
+{
+    std::string parameter = "lowercase";
+    std::cout << Convert(parameter);
+    std::cin.ignore();
+    return 0;
+}
+
+
+// tolower example (C++)
+#include <iostream>       // std::cout
+#include <string>         // std::string
+#include <locale>         // std::locale, std::tolower
+int main ()
+{
+  std::locale loc;
+  std::string str="Test String.\n";
+  for (std::string::size_type i=0; i<str.length(); ++i)
+    std::cout << std::tolower(str[i],loc);
+  return 0;
+}
+
+
+#include <iostream>
+#include <clocale>
+#include <cwctype>
+#include <cstdlib>
+int main()
+{
+    std::setlocale(LC_ALL, "en_US.utf8");
+
+    char utf8[] = {'\xc3', '\x81'};
+    wchar_t big;
+    std::mbtowc(&big, utf8, sizeof utf8);
+    // or just skip the whole utf8 conversion
+    //    wchar_t big = L'Á';
+    wchar_t small = std::towlower(big);
+    std::wcout << "Big: " << big  << '\n'
+               << "Small: " << small << '\n';
+}
+
+*/

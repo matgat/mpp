@@ -29,7 +29,7 @@ void cls_Dictionary::Invert(const bool nonum)
     std::cout << std::endl << "{Inverting dictionary}\n";
     if(nonum) std::cerr << "  Excluding numbers\n";
     inherited inv_map;
-    for(auto i=begin(); i!=end(); ++i)
+    for( auto i=begin(); i!=end(); ++i )
        {
         if( nonum )
            {// Exclude numbers
@@ -242,9 +242,10 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 while(c==' ' || c=='\t') get(c,fin); // Skip spaces
                 // Collect the macro string
                 def = "";
-                // The token ends with control chars or eof
+                // The token ends with control chars or EOF
                 while( c!=EOF && c>' ' )
                    {
+                    // if(c=='/') invalid macro chars
                     def += c;
                     get(c,fin); // Next
                    }
@@ -261,7 +262,8 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 while(c==' ' || c=='\t') get(c,fin); // Skip spaces
                 // Collect the expansion string
                 exp = "";
-                // The token ends with control chars or eof
+                // The token ends with control chars or EOF
+                // ...or get all, until comment, EOL or EOF
                 while( c!=EOF && c>' ' )
                    {
                     exp += c;
@@ -472,13 +474,12 @@ int cls_Dictionary::LoadFile( const std::string& pth )
        }
 
     // (1) See syntax (extension) and parse
-    std::string ext( pth.find_last_of(".")!=std::string::npos ? pth.substr(pth.find_last_of(".")+1) : "" );
-    mat::strtolower(ext);
-    bool fagor = ext=="plc";
-    //std::cerr << "  Parsing as: Fagor DEF (." << ext << ")\n";
+    std::string dir,nam,ext;
+    mat::split_path(pth, dir,nam,ext);
+    bool fagor = (mat::tolower(ext)==".plc");
 
     // (2) Parse the file
-    EN_ENCODING enc = CheckBOM( fin );
+    EN_ENCODING enc = mat::CheckBOM( fin );
     // Get the rest
     if( enc==ANSI || enc==UTF8 )
          {

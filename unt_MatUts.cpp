@@ -8,6 +8,57 @@
 #include "unt_MatUts.h" // 'nms_Mat'
 
 
+//-----------------------------------------------------------------------
+// Decompose path
+void nms_Mat::split_path(const std::string& pth, std::string& dir, std::string& nam, std::string& ext)
+{
+    // Get parent folder and fullname
+    std::string::size_type i = pth.find_last_of("\\/");
+    if( i != std::string::npos )
+         {
+          dir = pth.substr(0, ++i);
+          nam = pth.substr(i);
+         }
+    else {
+          dir = "";
+          nam = pth;
+         }
+    // Get basename and extension (dot included)
+    i = nam.rfind('.');
+    if( i != std::string::npos )
+         {
+          ext = nam.substr(i);
+          nam = nam.substr(0,i);
+         }
+    else {
+          ext = "";
+         }
+} // 'split_path'
+
+
+
+/*
+//---------------------------------------------------------------------------
+// Get/set the modification date of a file
+#include <boost/filesystem/operations.hpp>
+#include <ctime>
+void nms_Mat::change_mdate( const std::string& pth )
+{
+    boost::filesystem::path opth( pth ) ;
+    if( boost::filesystem::exists( opth ) )
+       {
+        std::time_t mt = boost::filesystem::last_write_time( opth ) ;
+        //std::cout << pth << " was modified on " << std::ctime(&mt) << '\n';
+        std::time_t now = std::time(0);
+        boost::filesystem::last_write_time( opth, now );
+        mt = boost::filesystem::last_write_time( opth );
+        //std::cout << "Now the modification time is " << std::ctime(&mt) << '\n';
+       }
+    //else std::cerr << "Could not find file " << pth << '\n';
+    else throw std::runtime_error("Could not find file: " + pth);
+}
+*/
+
 
 //---------------------------------------------------------------------------
 // Strictly convert a (dec) floating point or an (oct/dec/hex) int literal
@@ -73,11 +124,13 @@ double nms_Mat::ToNum( const std::string& s, const bool strict )
        }
 
     // (2) Floating point number
+    int found = 0;
     double val = 0.0;
 
     // (2.1) Get integer part
     if( s[i]>='0' && s[i]<='9' )
        {
+        found |= 0x1; // Found integer part
         val = s[i] - '0';
         while( ++i<len )
            {
@@ -93,6 +146,7 @@ double nms_Mat::ToNum( const std::string& s, const bool strict )
     double k = 0.1; // shift of decimal part
     if( s[i]==chDecSep )
        {
+        found |= 0x2; // Found decimal sep
         size_t di = i;
         while( ++i<len )
            {
@@ -107,7 +161,7 @@ double nms_Mat::ToNum( const std::string& s, const bool strict )
     int exp=0, exp_sgn=1; // exponent and its sign
     if( s[i]=='E' || s[i]=='e' )
        {
-        //e_found = true;
+        found |= 0x4; // Found exponential
         ++i;
         if(i>=len) if(strict) throw std::runtime_error("Invalid number: " + s);
         // Detect exponent sign
@@ -131,10 +185,9 @@ double nms_Mat::ToNum( const std::string& s, const bool strict )
        }
 
     // (2.4) Check, calculate and return value
-    //if(strict) throw std::runtime_error("Invalid number: " + s);
+    if(!found) throw std::runtime_error("Invalid number: " + s);
     if(exp) return sgn * val * std::pow(10, exp_sgn * exp);
     else return sgn * val;
-
 } // 'ToNum'
 
 /*

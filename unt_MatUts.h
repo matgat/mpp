@@ -23,16 +23,6 @@
 
 namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 {
- 
-    double ToNum(const std::string&, const bool strict =true); // Number conversion
-    
-    //-----------------------------------------------------------------------
-    // Lowercase conversion (fails with UTF8!)
-    inline std::string& strtolower(std::string& s)
-       {
-        for(size_t i=0, imax=s.length(); i<imax; ++i) s[i] = tolower(s[i]);
-        return s;
-       }
 
     //-----------------------------------------------------------------------
     // Tell if a string is a base 10 integer number
@@ -42,6 +32,25 @@ namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         for(size_t i=0; i<s.length(); ++i) if( s[i]<'0' || s[i]>'9' ) return false;
         return true;
        }
+
+    //-----------------------------------------------------------------------
+    // Decompose path
+    void split_path(const std::string& pth, std::string& dir, std::string& nam, std::string& ext);
+
+
+    /*
+    //-----------------------------------------------------------------------
+    // Change file extension (include dot)
+    inline std::string change_ext(const std::string& pth, const std::string& ext2)
+       {
+        std::string dir,nam,ext;
+        split_path(pth,dir,nam,ext);
+        return dir+nam+ext2;
+       } */
+
+
+    //-----------------------------------------------------------------------
+    double ToNum(const std::string&, const bool strict =true); // Number conversion
 
 } // 'nms_Mat' ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 namespace mat = nms_Mat; // a short alias

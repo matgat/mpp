@@ -144,37 +144,36 @@ EN_ENCODING nms_Mat::CheckBOM( std::istream& fin, std::ostream* fout )
 char32_t nms_Mat::GetUTF8( std::istream& in )
 {
     //static_assert( sizeof(char32_t)>=4, "" ); // #include <type_traits>?
-    char c; // std::istream::char_type
-    if( in.get(c) )
+    unsigned char c;
+    if( in>>c )
        {
-        //if( c<'\x80' )
-        if( c<'\x80' )
+        if( c<0x80 )
            {// 1-byte code
             return c;
            }
-        else if( c<'\xC0' )
+        else if( c<0xC0 )
            { // invalid!
-            return '?';
+            return U'?';
            }
-        else if( c<'\xE0' )
+        else if( c<0xE0 )
            {// 2-byte code
-            char32_t c_utf8 = (c & '\x1F') << 6;
-            if( in.get(c) ) c_utf8 |= (c & 0x3F); //else truncated!
+            char32_t c_utf8 = (c & 0x1F) << 6;
+            if( in>>c ) c_utf8 |= (c & 0x3F); //else truncated!
             return c_utf8;
            }
-        else if( c<'\xF0' )
+        else if( c<0xF0 )
            {// 3-byte code
-            char32_t c_utf8 = (c & '\x0F') << 12;
-            if( in.get(c) ) c_utf8 |= (c & '\x3F') <<  6; //else truncated!
-            if( in.get(c) ) c_utf8 |= (c & '\x3F'); //else truncated!
+            char32_t c_utf8 = (c & 0x0F) << 12;
+            if( in>>c ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
+            if( in>>c ) c_utf8 |= (c & 0x3F); //else truncated!
             return c_utf8;
            }
-        else if( c<'\xF8' )
+        else if( c<0xF8 )
            {// 4-byte code
-            char32_t c_utf8 = (c & '\x07') << 18;
-            if( in.get(c) ) c_utf8 |= (c & '\x3F') << 12; //else truncated!
-            if( in.get(c) ) c_utf8 |= (c & '\x3F') <<  6; //else truncated!
-            if( in.get(c) ) c_utf8 |= (c & '\x3F'); //else truncated!
+            char32_t c_utf8 = (c & 0x07) << 18;
+            if( in>>c ) c_utf8 |= (c & 0x3F) << 12; //else truncated!
+            if( in>>c ) c_utf8 |= (c & 0x3F) <<  6; //else truncated!
+            if( in>>c ) c_utf8 |= (c & 0x3F); //else truncated!
             return c_utf8;
            }
        }

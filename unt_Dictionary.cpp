@@ -80,7 +80,10 @@ void cls_Dictionary::Peek()
 template<typename T,bool E=true> class fun_ReadChar /////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: " << sizeof(T) << " bytes\n"; }
+    fun_ReadChar()
+       {
+        std::cerr << "  Reading stream unit: " << sizeof(T) << " bytes\n";
+       }
     inline std::istream& operator()(T& c, std::istream& in)
        {
         in.read(buf,bufsiz);
@@ -104,7 +107,10 @@ template<typename T,bool E=true> class fun_ReadChar /////////////////////////
 template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: char32_t little endian\n"; }
+    fun_ReadChar()
+       {
+        std::cerr << "  Reading stream unit: char32_t little endian\n";
+       }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
         in.read(buf,2);
@@ -119,7 +125,10 @@ template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
 template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: char32_t big endian\n"; }
+    fun_ReadChar()
+       {
+        std::cerr << "  Reading stream unit: char32_t big endian\n";
+       }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
         in.read(buf,2);
@@ -134,7 +143,10 @@ template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
 template<> class fun_ReadChar<char16_t,true> ////////////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: char16_t little endian\n"; }
+    fun_ReadChar()
+       {
+        std::cerr << "  Reading stream unit: char16_t little endian\n";
+       }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
         in.read(buf,2);
@@ -149,7 +161,10 @@ template<> class fun_ReadChar<char16_t,true> ////////////////////////////////
 template<> class fun_ReadChar<char16_t,false> ///////////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: char16_t big endian\n"; }
+    fun_ReadChar()
+       {
+        std::cerr << "  Reading stream unit: char16_t big endian\n";
+       }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
         in.read(buf,2);
@@ -164,7 +179,10 @@ template<> class fun_ReadChar<char16_t,false> ///////////////////////////////
 template<> class fun_ReadChar<char> /////////////////////////////////////////
 {
  public:
-    fun_ReadChar() { std::cerr << "  Reading stream unit: char\n"; }
+    fun_ReadChar()
+       {
+        //std::cerr << "  Reading stream unit: char\n";
+       }
     inline std::istream& operator()(char& c, std::istream& in)
        {
         return in.get(c);
@@ -177,7 +195,7 @@ template<> class fun_ReadChar<char> /////////////////////////////////////////
 template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream& fin)
 {
     fun_ReadChar<T,E> get;
-    std::cerr << "  Parsing as: C-like defines\n";
+    //std::cout << "  Parsing as: C-like defines\n";
     
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
     int issues=0; // Number of issues of the parsing
@@ -313,7 +331,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
 template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream& fin)
 {
     fun_ReadChar<T,E> get;
-    std::cerr << "  Parsing as: Fagor DEF file\n";
+    std::cout << "  Parsing as: Fagor DEF file\n";
 
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
     int issues=0; // Number of issues of the parsing

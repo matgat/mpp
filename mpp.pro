@@ -25,8 +25,8 @@ msvc:OBJECTS += setargv.obj
 
 #message($$QMAKESPEC)
 win32-g++ {
-    message(Remove MinGW libstdc++-6.dll dependency)
-    # -static -fno-rtti -fno-exceptions
-    QMAKE_LFLAGS += -static-libgcc -static-libstdc++
+    message(Remove MinGW libstdc++-6.dll dependency and other dlls)
+    QMAKE_LFLAGS += -static -static-libgcc -static-libstdc++
+    #  -fno-exceptions
     QMAKE_LFLAGS += -fno-rtti
 }

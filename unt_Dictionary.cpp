@@ -82,7 +82,7 @@ template<typename T,bool E=true> class fun_ReadChar /////////////////////////
  public:
     fun_ReadChar()
        {
-        std::cerr << "  Reading stream unit: " << sizeof(T) << " bytes\n";
+        std::cout << "  Reading stream unit: " << sizeof(T) << " bytes\n";
        }
     inline std::istream& operator()(T& c, std::istream& in)
        {
@@ -109,7 +109,7 @@ template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
  public:
     fun_ReadChar()
        {
-        std::cerr << "  Reading stream unit: char32_t little endian\n";
+        std::cout << "  Reading stream unit: char32_t little endian\n";
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
@@ -127,7 +127,7 @@ template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
  public:
     fun_ReadChar()
        {
-        std::cerr << "  Reading stream unit: char32_t big endian\n";
+        std::cout << "  Reading stream unit: char32_t big endian\n";
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
@@ -145,7 +145,7 @@ template<> class fun_ReadChar<char16_t,true> ////////////////////////////////
  public:
     fun_ReadChar()
        {
-        std::cerr << "  Reading stream unit: char16_t little endian\n";
+        std::cout << "  Reading stream unit: char16_t little endian\n";
        }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
@@ -163,7 +163,7 @@ template<> class fun_ReadChar<char16_t,false> ///////////////////////////////
  public:
     fun_ReadChar()
        {
-        std::cerr << "  Reading stream unit: char16_t big endian\n";
+        std::cout << "  Reading stream unit: char16_t big endian\n";
        }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
@@ -181,7 +181,7 @@ template<> class fun_ReadChar<char> /////////////////////////////////////////
  public:
     fun_ReadChar()
        {
-        //std::cerr << "  Reading stream unit: char\n";
+        //std::cout << "  Reading stream unit: char\n";
        }
     inline std::istream& operator()(char& c, std::istream& in)
        {

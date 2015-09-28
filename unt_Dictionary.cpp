@@ -295,10 +295,10 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 else {
                       // Insert in dictionary
                       auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
-                      if( !ins.second )
+                      if( !ins.second && ins.first->second!=exp )
                          {
                           ++issues;
-                          std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\', now \'" << exp << "\') \n";
+                          std::cerr << "  \'" << ins.first->first << "\' redefined in line " << l << " (was \'" << ins.first->second << "\', now \'" << exp << "\') \n";
                          }
                       else ++n_def;
                      }
@@ -443,10 +443,10 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                          }
                       // Insert in dictionary
                       auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
-                      if( !ins.second )
+                      if( !ins.second && ins.first->second!=exp )
                          {
                           ++issues;
-                          std::cerr << "  \'" << ins.first->first << "\' already existed in line " << l << " (was \'" << ins.first->second << "\', now \'" << exp << "\') \n";
+                          std::cerr << "  \'" << ins.first->first << "\' redefined in line " << l << " (was \'" << ins.first->second << "\', now \'" << exp << "\') \n";
                          }
                       else ++n_def;
                      }
@@ -564,10 +564,10 @@ int cls_Dictionary::LoadFile( const std::string& pth )
            {
             //std::cout << '\n' for(size_type i=0; i<rit->size(); ++i) std::cout << rit->str(i) << '\n';
             assert( rit->size()==3 );
-            auto ret = insert( value_type( rit->str(1), rit->str(2) ) );
-            if( !ret.second )
+            auto ins = insert( value_type( rit->str(1), rit->str(2) ) );
+            if( !ins.second && ins.first->second!=exp )
                {
-                std::cerr << "\'" << ret.first->first << "\' already existed (was \'" << ret.first->second << "\') \n";
+                std::cerr << "  \'" << ins.first->first << "\' redefined in line " << l << " (was \'" << ins.first->second << "\', now \'" << rit->str(2) << "\') \n";
                 ++issues;
                }
            }

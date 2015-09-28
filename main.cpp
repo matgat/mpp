@@ -169,15 +169,17 @@ int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dic
                 // The token ends with control chars or operators
                 while( c!=EOF && c>' ' &&
                        c!='+' && c!='-' && c!='*' && c!='=' &&
-                       c!='(' && c!=')' && // c!='[' && c!=']' && <can be part of the token>
+                       c!='(' && c!=')' && // c!='[' && c!=']' && (can be part of the token)
                        c!='{' && c!='}' && c!='<' && c!='>' &&
                        c!='!' && c!='&' && c!='|' && c!='^' &&
-                       c!=':' && c!=',' && // c!='.' && <can be part of the token>
+                       c!=':' && c!=',' && // c!='.' && (can be part of the token)
                        c!=';' && c!='/' && // <comment chars>
                        c!='\'' && c!='\"' && c!='\\' )
                    {
+                    bool sqbr_closed = (c==']');
                     tok += c;
                     c = fin.get(); // Next
+                    if( sqbr_closed && c==']' ) break; // Detect square bracket close
                    }
 
                 // Use token

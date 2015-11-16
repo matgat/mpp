@@ -84,6 +84,7 @@ int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dic
     int l = 1; // Current line number
     std::string tok; // Bag for current token
     bool skipsub = false; // Auxiliary to handle '#' for skipping substitution
+    unsigned int sqbr_opened = 0; // Auxiliary to handle square brackets in token
     // TODO 5: should deal with encoding, now supporting just 8bit enc
     EN_ENCODING enc = mat::CheckBOM( fin, &fout );
     if( enc != ANSI )
@@ -149,7 +150,8 @@ int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dic
                       c = fin.get();
                       status = ST_SKIPLINE;
                      }
-                else {// Got a token
+                else {// Got a token: initialize status to get a new one
+                      sqbr_opened = 0;
                       // Handle the 'no-substitution' character
                       if( c=='#' )
                            {
@@ -176,10 +178,15 @@ int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dic
                        c!=';' && c!='/' && // <comment chars>
                        c!='\'' && c!='\"' && c!='\\' )
                    {
-                    bool sqbr_closed = (c==']');
+                    if(c=='[') ++sqbr_opened;
+                    else if (c==']')
+                       {
+                        if(sqbr_opened>0) --sqbr_opened;
+                        //else // closing a not opened '['!!
+                       }
                     tok += c;
                     c = fin.get(); // Next
-                    if( sqbr_closed && c==']' ) break; // Detect square bracket close
+                    if( sqbr_opened==0 && c==']' ) break; // Detect square bracket close
                    }
 
                 // Use token

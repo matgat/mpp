@@ -424,7 +424,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                      }
                 else {
                       // Check special syntax for PLC resources: ([R|M|I|O])(\d+)
-                      // ex. R123 ==> V.PLC.R[123]    B5R123 ==> [V.PLC.R[123]&2**5]
+                      // ex. R123 ==> V.PLC.R[123]
                       std::string prfx;
                       auto p = exp.find(prfx="R");
                       // TODO 5: this is not so efficient, but more appealing to eyes
@@ -441,6 +441,21 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                               exp = "V.PLC." + prfx + "[" + idx + "]";
                              }
                          }
+                      // Detect bit syntax:  B5R123 ==> [V.PLC.R[123]&2**5]
+                      if( exp.find("B") == 0 )
+                         {
+                          p = exp.find("R");
+                          if(p>1)
+                             {
+                              std::string bitidx = exp.substr( 1, p );
+                              if( mat::is_index(bitidx) )
+                                 {
+                                  std::string idx = exp.substr( p+1 );
+                                  exp = "V.PLC.R[" + idx + "]&2**" + bitidx;
+                                 }
+                             }
+                         }
+
                       // Insert in dictionary
                       auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
                       if( !ins.second && ins.first->second!=exp )

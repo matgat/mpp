@@ -179,12 +179,12 @@ int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dic
                        c!='\'' && c!='\"' && c!='\\' )
                    {
                     if(c=='[') ++sqbr_opened;
-                    else if (c==']')
+                    else if(c==']')
                        {
                         if(sqbr_opened>0) --sqbr_opened;
                         //else // closing a not opened '['!!
                        }
-                    tok += c;
+                    tok += c; // potrei solo accettare numeri if(sqbr_opened>0 && !isnumber(c)) break
                     c = fin.get(); // Next
                     if( sqbr_opened==0 && c==']' ) break; // Detect square bracket close
                    }
@@ -297,7 +297,7 @@ int main( int argc, const char* argv[] )
               else {
                     std::cerr << "!! Unknown command switch " << arg << std::endl;
                     std::cerr << "   Usage:" << std::endl;
-                    std::cerr << "   mpp -m .xml=.~xml -i defvar.h -f *.xml" << std::endl;
+                    std::cerr << "   mpp -m .ncs=.fst -i defvar.def -f *.ncs" << std::endl;
                     std::cerr << "   mpp -x -i defvar.h \"in.ncs\" - \"out.nc\"" << std::endl;
                     return RET_ARGERR;
                    }

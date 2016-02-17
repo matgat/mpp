@@ -68,7 +68,7 @@ EN_ENCODING nms_Mat::CheckBOM( std::istream& fin, std::ostream* fout )
                          else {
                                std::cerr << "  Detected part of invalid UTF-32 (LE) BOM (FF FE 00)" << std::endl;
                                if(fout) *fout << '\xFF' << '\xFE' << '\x00'; // pass it
-                               //TODO: fin.unget(); // Put back the last byte read
+                               //fin.unget(); // Put back the last byte read
                                return UTF16_LE;
                               }
                         }

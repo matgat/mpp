@@ -50,8 +50,6 @@ int main( int argc, const char* argv[] )
     std::map<std::string,std::string> extmap = { {".fst", ".ncs"},
                                                  {".nc", ".ncs"}  };
     // (1) Command line arguments
-    std::cout << "mpp (" << __DATE__ << ")\n";
-    //std::cout << "Running in: " << argv[0] << std::endl;
     bool including = false, // expected a definition file path
          getting = false,   // expected output file path
          mapping = false;   // expected an extensions mapping string
@@ -187,6 +185,8 @@ int main( int argc, const char* argv[] )
         invert_map(extmap, false); // Don't be strict
        }
     //dict.Peek();
+    if(verbose) std::cout << "mpp (" << __DATE__ << ")\n";
+    //if(verbose) std::cout << "Running in: " << argv[0] << std::endl;
 
     // (2) Process the files
     int issues = 0;

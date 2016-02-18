@@ -781,7 +781,7 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
 
     // (4) Finally
     //fout.flush(); // Ensure to write the disk
-    std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines" << std::endl;
+    if(verbose) std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines" << std::endl;
     return 0;
 } // 'Process'
 

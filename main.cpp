@@ -64,17 +64,17 @@ int main( int argc, const char* argv[] )
               // Check preesisting state
               if( including )
                  {
-                  std::cerr << "!! Expected a path after -i instead of: " << arg << std::endl;
+                  std::cerr << "!! Expected a path after -i instead of: " << arg << '\n';
                   return RET_ARGERR;
                  }
               else if( getting )
                  {
-                  std::cerr << "!! Expected a path after - instead of: " << arg << std::endl;
+                  std::cerr << "!! Expected a path after - instead of: " << arg << '\n';
                   return RET_ARGERR;
                  }
               else if( mapping )
                  {
-                  std::cerr << "!! Expected an extmap after -m instead of: " << arg << std::endl;
+                  std::cerr << "!! Expected an extmap after -m instead of: " << arg << '\n';
                   return RET_ARGERR;
                  }
               // Now see the option
@@ -82,14 +82,14 @@ int main( int argc, const char* argv[] )
                     {// Follows a path, next path is the output file
                      if( files.empty() )
                         {
-                         std::cerr << "!! No input file specified before " << arg << std::endl;
+                         std::cerr << "!! No input file specified before " << arg << '\n';
                          return RET_ARGERR;
                         }
                      getting = true;
                     }
               else if( arg.length()!=2 )
                    {
-                    std::cerr << "!! Wrong command switch " << arg << std::endl;
+                    std::cerr << "!! Wrong command switch " << arg << '\n';
                     return RET_ARGERR;
                    }
               else if( arg[1]=='i' )
@@ -113,15 +113,15 @@ int main( int argc, const char* argv[] )
                     verbose = true;
                    }
               else {
-                    std::cerr << "!! Unknown command switch " << arg << std::endl;
-                    std::cerr << "   Usage:" << std::endl;
-                    std::cerr << "   mpp -v -m .ncs=.fst -i defvar.def -f *.ncs" << std::endl;
-                    std::cerr << "   mpp -x -i defvar.h \"in.nc\" - \"out.ncs\"" << std::endl;
-                    std::cerr << "       -v: verbose" << std::endl;
-                    std::cerr << "       -f: force overwrite" << std::endl;
-                    std::cerr << "       -x: invert the dictionary" << std::endl;
-                    std::cerr << "       -i: include definitions file" << std::endl;
-                    std::cerr << "       -m: map automatic output extension" << std::endl;
+                    std::cerr << "!! Unknown command switch " << arg << '\n';
+                    std::cerr << "   Usage:\n";
+                    std::cerr << "   mpp -v -m .ncs=.fst -i defvar.def -f *.ncs\n";
+                    std::cerr << "   mpp -x -i defvar.h \"in.nc\" - \"out.ncs\"\n";
+                    std::cerr << "       -v: verbose\n";
+                    std::cerr << "       -f: force overwrite\n";
+                    std::cerr << "       -x: invert the dictionary\n";
+                    std::cerr << "       -i: include definitions file\n";
+                    std::cerr << "       -m: map automatic output extension\n";
                     return RET_ARGERR;
                    }
              }
@@ -132,7 +132,7 @@ int main( int argc, const char* argv[] )
                     int issues = dict.LoadFile(arg, verbose);
                     if( issues>0 )
                        {
-                        std::cerr << "! " << issues << " issues including " << arg << std::endl;
+                        std::cerr << "! " << issues << " issues including " << arg << '\n';
                         return RET_DEFERR;
                        }
                    }
@@ -154,14 +154,14 @@ int main( int argc, const char* argv[] )
                              {
                               if( e.first==ext1 )
                                  {
-                                  std::cerr << "!! Invalid extension map " << arg << std::endl;
-                                  std::cerr << "   \'" << ext1 << "\' was already mapped" << std::endl;
+                                  std::cerr << "!! Invalid extension map " << arg << '\n';
+                                  std::cerr << "   \'" << ext1 << "\' was already mapped\n";
                                   return RET_ARGERR;
                                  }
                               if( e.second==ext2 )
                                  {
-                                  std::cerr << "!! Invalid extension map " << arg << std::endl;
-                                  std::cerr << "   \'" << ext2 << "\' was already mapped" << std::endl;
+                                  std::cerr << "!! Invalid extension map " << arg << '\n';
+                                  std::cerr << "   \'" << ext2 << "\' was already mapped\n";
                                   return RET_ARGERR;
                                  }
                              }
@@ -169,8 +169,8 @@ int main( int argc, const char* argv[] )
                           extmap[ext1] = ext2;
                          }
                     else {
-                          std::cerr << "!! Invalid extension map " << arg << std::endl;
-                          std::cerr << "   Expected something like: .xxx=.yyy" << std::endl;
+                          std::cerr << "!! Invalid extension map " << arg << '\n';
+                          std::cerr << "   Expected something like: .xxx=.yyy\n";
                           return RET_ARGERR;
                          }
                    }
@@ -186,7 +186,7 @@ int main( int argc, const char* argv[] )
        }
     //dict.Peek();
     if(verbose) std::cout << "mpp (" << __DATE__ << ")\n";
-    //if(verbose) std::cout << "Running in: " << argv[0] << std::endl;
+    //if(verbose) std::cout << "Running in: " << argv[0] << '\n';
 
     // (2) Process the files
     int issues = 0;
@@ -214,7 +214,7 @@ int main( int argc, const char* argv[] )
     // (3) Finally
     if( issues>0 ) // Check issues
        {
-        std::cout << std::endl << issues << " issues were found!" << std::endl;
+        std::cout << '\n' << issues << " issues were found!\n";
         return RET_PRCERR;
        }
     return RET_OK;

@@ -27,7 +27,7 @@ cls_Dictionary::cls_Dictionary()
 // Invert the dictionary (can exclude numbers)
 void cls_Dictionary::Invert(const bool nonum, const bool verbose)
 {
-    if(verbose) std::cout << std::endl << "{Inverting dictionary}\n";
+    if(verbose) std::cout << "\n{Inverting dictionary}\n";
     if(nonum) std::cerr << "  Excluding numbers\n";
     inherited inv_map;
     for( auto i=begin(); i!=end(); ++i )
@@ -41,7 +41,7 @@ void cls_Dictionary::Invert(const bool nonum, const bool verbose)
         auto has = inv_map.find(i->second);
         if( has != inv_map.end() )
              {// Already existing, add the alias
-              //std::cerr << "  Adding alias \'" << i->first << "\' for " << i->second << std::endl;
+              //std::cerr << "  Adding alias \'" << i->first << "\' for " << i->second << '\n';
               // Add a recognizable placeholder to ease the manual choose
               if(has->second.find("<CHOOSE:")==std::string::npos) has->second = "<CHOOSE:" + has->second + ">";
               has->second[has->second.length()-1] = '|'; // *(has->second.rbegin()) = '|';
@@ -55,7 +55,7 @@ void cls_Dictionary::Invert(const bool nonum, const bool verbose)
                  }
              }
        }
-   if(verbose) std::cout << "  Now got " << inv_map.size() << " voices from previous " << size() << std::endl;
+   if(verbose) std::cout << "  Now got " << inv_map.size() << " voices from previous " << size() << '\n';
    // Finally, assign the inverted dictionary
    inherited::operator=( inv_map );
 } // 'Invert'
@@ -68,7 +68,7 @@ void cls_Dictionary::Peek()
     int max = 10;
     for(auto i=begin(); i!=end(); ++i)
        {
-        std::cout << "  " << i->first << " " << i->second << std::endl;
+        std::cout << "  " << i->first << " " << i->second << '\n';
         if(--max<0) break;
        }
 } // 'Peek'
@@ -271,7 +271,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 if( def.empty() )
                      {// No macro defined!
                       ++issues;
-                      std::cerr << "  No macro defined in line " << l << std::endl;
+                      std::cerr << "  No macro defined in line " << l << '\n';
                       status = ST_ENDLINE;
                      }
                 else status = ST_EXP;
@@ -291,7 +291,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 if( exp.empty() )
                      {// No expansion defined!
                       ++issues;
-                      std::cerr << "  No expansion defined in line " << l << std::endl;
+                      std::cerr << "  No expansion defined in line " << l << '\n';
                      }
                 else {
                       // Insert in dictionary
@@ -314,7 +314,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 else {// Garbage
                       ++issues;
                       std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)\n";
-                      //char s[256]; fin.getline(s,256); std::cerr << s << std::endl;
+                      //char s[256]; fin.getline(s,256); std::cerr << s << '\n';
                       status = ST_SKIPLINE; // Garbage, skip the line
                      }
                 get(c,fin); // Next
@@ -402,7 +402,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 if( def.empty() )
                      {// No macro defined!
                       ++issues;
-                      std::cerr << "  No macro defined in line " << l << std::endl;
+                      std::cerr << "  No macro defined in line " << l << '\n';
                       status = ST_ENDLINE;
                      }
                 else status = ST_EXP;
@@ -421,7 +421,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 if( exp.empty() )
                      {// No expansion defined!
                       ++issues;
-                      std::cerr << "  No expansion defined in line " << l << std::endl;
+                      std::cerr << "  No expansion defined in line " << l << '\n';
                      }
                 else {
                       // Check special syntax for PLC resources: ([R|M|I|O])(\d+)
@@ -477,7 +477,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 else {// Garbage
                       ++issues;
                       std::cerr << "  Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)\n";
-                      //char s[256]; fin.getline(s,256); std::cerr << s << std::endl;
+                      //char s[256]; fin.getline(s,256); std::cerr << s << '\n';
                       status = ST_SKIPLINE; // Garbage, skip the line
                      }
                 get(c,fin); // Next
@@ -499,11 +499,11 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
 int cls_Dictionary::LoadFile( const std::string& pth, const bool verbose )
 {
     // (0) Open file for read
-    if(verbose) std::cout << std::endl << '[' << pth << ']' << std::endl;
+    if(verbose) std::cout << "\n[" << pth << "]\n";
     std::ifstream fin( pth, std::ios::binary );
     if( !fin )
        {
-        std::cerr << "  Cannot read " << pth << "\n";
+        std::cerr << "  Cannot read " << pth << '\n';
         return 1;
        }
 
@@ -561,7 +561,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
     std::ifstream fin( pth );
     if( !fin )
        {
-        std::cerr << "!! Cannot open " << pth << std::endl;
+        std::cerr << "!! Cannot open " << pth << '\n';
         return 1;
        }
 
@@ -572,10 +572,10 @@ int cls_Dictionary::LoadFile( const std::string& pth )
        {
         //std::stringstream lineStream(line);
         //std::string token;
-        //while(lineStream >> token) std::cout << "Token: " << token << std::endl;
+        //while(lineStream >> token) std::cout << "Token: " << token << '\n';
 
         std::regex_iterator<std::string::iterator> rit ( line.begin(), line.end(), regdef ), rend;
-        //while( rit!=rend ) { std::cout << rit->str() << std::endl; ++rit; }
+        //while( rit!=rend ) { std::cout << rit->str() << '\n'; ++rit; }
         if( rit!=rend )
            {
             //std::cout << '\n' for(size_type i=0; i<rit->size(); ++i) std::cout << rit->str(i) << '\n';
@@ -607,35 +607,35 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
     //mat::split_path(pth_in,dir,nam,ext); if( ext==".def" )...
     if( pth_in==pth_out )
        {
-        std::cerr << "  Same output file name! " << pth_in << std::endl;
+        std::cerr << "  Same output file name! " << pth_in << '\n';
         return 1;
        }
 
     // (1) Open input file for read
-    std::cout << std::endl << ' ' << pth_in << " >> " << std::endl;
+    std::cout << "\n " << pth_in << " >>\n";
     std::ifstream fin( pth_in, std::ios::binary );
     if( !fin )
        {
-        std::cerr << "  Cannot read the file!" << std::endl;
+        std::cerr << "  Cannot read the file!\n";
         return 1;
        }
 
     // (2) Open output file for write
-    std::cout << "  >> " << pth_out << std::endl;
+    std::cout << "  >> " << pth_out << '\n';
     // Check overwrite flag
     if( !overwrite )
        {// If must not overwrite, check existance
         std::ifstream fout(pth_out);
         if( fout.good() )
            {
-            std::cerr << "  Output file already existing!! (use -f to force overwrite)" << std::endl;
+            std::cerr << "  Output file already existing!! (use -f to force overwrite)\n";
             return 1;
            }
        }
     std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
     if( !fout )
        {
-        std::cerr << "  Cannot write the output file!" << std::endl;
+        std::cerr << "  Cannot write the output file!\n";
         return 1;
        }
 
@@ -650,7 +650,7 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
     EN_ENCODING enc = mat::CheckBOM( fin, &fout, verbose );
     if( enc != ANSI )
        {
-        std::cerr << "  Cannot handle this encoding!" << std::endl;
+        std::cerr << "  Cannot handle this encoding!\n";
         return 1;
        }
     // Get the rest
@@ -781,7 +781,7 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
 
     // (4) Finally
     //fout.flush(); // Ensure to write the disk
-    if(verbose) std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines" << std::endl;
+    if(verbose) std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines\n";
     return 0;
 } // 'Process'
 

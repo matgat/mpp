@@ -19,6 +19,7 @@
     DEPENDENCIES:
     ---------------------------------------------     */
     #include <string>
+    #include <cctype> // 'std::isdigit'
 
 
 namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -29,7 +30,7 @@ namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
     inline bool is_index(const std::string& s)
        {
         if( s.empty() ) return false;
-        for(size_t i=0; i<s.length(); ++i) if( s[i]<'0' || s[i]>'9' ) return false;
+        for(size_t i=0; i<s.length(); ++i) if( !std::isdigit(s[i]) ) return false;
         return true;
        }
 

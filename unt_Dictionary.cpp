@@ -2,6 +2,7 @@
 #include <cassert> // 'assert'
 #include <iostream> // 'std::cerr'
 #include <fstream> // 'std::ifstream'
+#include <cctype> // 'std::isspace', 'std::isblank'
 //#include <regex> // 'std::regex_iterator'
 #include "unt_PoorMansUnicode.h" // 'CheckBOM'
 #include "unt_MatUts.h" // 'mat::ToNum'
@@ -24,9 +25,9 @@ cls_Dictionary::cls_Dictionary()
 
 //---------------------------------------------------------------------------
 // Invert the dictionary (can exclude numbers)
-void cls_Dictionary::Invert(const bool nonum)
+void cls_Dictionary::Invert(const bool nonum, const bool verbose)
 {
-    std::cout << std::endl << "{Inverting dictionary}\n";
+    if(verbose) std::cout << std::endl << "{Inverting dictionary}\n";
     if(nonum) std::cerr << "  Excluding numbers\n";
     inherited inv_map;
     for( auto i=begin(); i!=end(); ++i )
@@ -54,7 +55,7 @@ void cls_Dictionary::Invert(const bool nonum)
                  }
              }
        }
-   std::cout << "  Now got " << inv_map.size() << " voices from previous " << size() << std::endl;
+   if(verbose) std::cout << "  Now got " << inv_map.size() << " voices from previous " << size() << std::endl;
    // Finally, assign the inverted dictionary
    inherited::operator=( inv_map );
 } // 'Invert'
@@ -80,9 +81,9 @@ void cls_Dictionary::Peek()
 template<typename T,bool E=true> class fun_ReadChar /////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        std::cout << "  Reading stream unit: " << sizeof(T) << " bytes\n";
+        if(verbose) std::cout << "  Reading stream unit: " << sizeof(T) << " bytes\n";
        }
     inline std::istream& operator()(T& c, std::istream& in)
        {
@@ -107,9 +108,9 @@ template<typename T,bool E=true> class fun_ReadChar /////////////////////////
 template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        std::cout << "  Reading stream unit: char32_t little endian\n";
+        if(verbose) std::cout << "  Reading stream unit: char32_t little endian\n";
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
@@ -125,9 +126,9 @@ template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
 template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        std::cout << "  Reading stream unit: char32_t big endian\n";
+        if(verbose) std::cout << "  Reading stream unit: char32_t big endian\n";
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
@@ -143,9 +144,9 @@ template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
 template<> class fun_ReadChar<char16_t,true> ////////////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        std::cout << "  Reading stream unit: char16_t little endian\n";
+        if(verbose) std::cout << "  Reading stream unit: char16_t little endian\n";
        }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
@@ -161,9 +162,9 @@ template<> class fun_ReadChar<char16_t,true> ////////////////////////////////
 template<> class fun_ReadChar<char16_t,false> ///////////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        std::cout << "  Reading stream unit: char16_t big endian\n";
+        if(verbose) std::cout << "  Reading stream unit: char16_t big endian\n";
        }
     inline std::istream& operator()(char16_t& c, std::istream& in)
        {
@@ -179,9 +180,9 @@ template<> class fun_ReadChar<char16_t,false> ///////////////////////////////
 template<> class fun_ReadChar<char> /////////////////////////////////////////
 {
  public:
-    fun_ReadChar()
+    fun_ReadChar(const bool verbose)
        {
-        //std::cout << "  Reading stream unit: char\n";
+        if(verbose) std::cout << "  Reading stream unit: char\n";
        }
     inline std::istream& operator()(char& c, std::istream& in)
        {
@@ -192,10 +193,10 @@ template<> class fun_ReadChar<char> /////////////////////////////////////////
 
 //---------------------------------------------------------------------------
 // A parser for c-like '#define' directives
-template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream& fin)
+template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream& fin, const bool verbose =false)
 {
-    fun_ReadChar<T,E> get;
-    //std::cout << "  Parsing as: C-like defines\n";
+    fun_ReadChar<T,E> get(verbose);
+    if(verbose) std::cout << "  Parsing as: C-like defines\n";
     
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEFINE, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
     int issues=0; // Number of issues of the parsing
@@ -219,7 +220,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_NEWLINE : // See what we have
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip initial spaces
+                while( std::isspace(c) && c!='\n' ) get(c,fin); // Skip initial spaces
                 // Now see what we have
                 if( c=='#' ) status = ST_DEFINE; // could be a '#define'
                 else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
@@ -242,7 +243,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 if(get(c,fin) && c=='e')
                    {// Well now should have a space
                     get(c,fin);
-                    if(c==' ' || c=='\t')
+                    if( std::isblank(c) )
                        {// Got a define
                         status = ST_MACRO;
                         get(c,fin); // Next
@@ -257,7 +258,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_MACRO : // Collect the define macro string
-                while(c==' ' || c=='\t') get(c,fin); // Skip spaces
+                while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the macro string
                 def = "";
                 // The token ends with control chars or EOF
@@ -277,7 +278,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_EXP : // Collect the macro expansion string
-                while(c==' ' || c=='\t') get(c,fin); // Skip spaces
+                while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the expansion string
                 exp = "";
                 // The token ends with control chars or EOF
@@ -306,7 +307,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_ENDLINE : // Check the remaining after a macro definition
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip final spaces
+                while( std::isspace(c) && c!='\n' ) get(c,fin); // Skip final spaces
                 // Now see what we have
                 if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
                 else if( c=='/' && fin.peek()=='/' ) status = ST_SKIPLINE; // A comment
@@ -322,16 +323,16 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
            } // 'switch(status)'
        } // 'while(!EOF)'
     // Finally
-    std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << "\n";
+    if(verbose) std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << "\n";
     return issues;
 } // 'Parse_H'
 
 //---------------------------------------------------------------------------
 // A parser for Fagor 'DEF' files
-template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream& fin)
+template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream& fin, const bool verbose =false)
 {
-    fun_ReadChar<T,E> get;
-    std::cout << "  Parsing as: Fagor DEF file\n";
+    fun_ReadChar<T,E> get(verbose);
+    if(verbose) std::cout << "  Parsing as: Fagor DEF file\n";
 
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
     int issues=0; // Number of issues of the parsing
@@ -355,7 +356,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_NEWLINE : // See what we have
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip initial spaces
+                while( std::isspace(c) && c!='\n' ) get(c,fin); // Skip initial spaces
                 // Now see what we have
                 if( c=='D' ) status = ST_DEF; // could be a 'DEF'
                 else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
@@ -374,7 +375,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 if(get(c,fin) && c=='F')
                    {// Well now should have a space
                     get(c,fin);
-                    if(c==' ' || c=='\t')
+                    if( std::isblank(c) )
                        {// Got a define
                         status = ST_MACRO;
                         get(c,fin); // Next
@@ -389,7 +390,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_MACRO : // Collect the define macro string
-                while(c==' ' || c=='\t') get(c,fin); // Skip spaces
+                while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the macro string
                 def = "";
                 // The token ends with control chars or eof
@@ -408,7 +409,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_EXP : // Collect the macro expansion string
-                while(c==' ' || c=='\t') get(c,fin); // Skip spaces
+                while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the expansion string
                 exp = "";
                 // The token ends with control chars or eof
@@ -469,7 +470,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_ENDLINE : // Check the remaining after a macro definition
-                while(c==' '||c=='\t'||c=='\r'||c=='\v'||c=='\f') get(c,fin); // Skip final spaces
+                while( std::isspace(c) && c!='\n' ) get(c,fin); // Skip final spaces
                 // Now see what we have
                 if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
                 else if( c==';' ) status = ST_SKIPLINE; // A comment
@@ -485,7 +486,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
            } // 'switch(status)'
        } // 'while(!EOF)'
     // Finally
-    std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << "\n";
+    if(verbose) std::cout << "  Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << "\n";
     return issues;
 } // 'Parse_D'
 
@@ -495,14 +496,14 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
 // A simple fast parser for:
 // #define XXX YYY // comment
 // DEF XXX YYY ; comment
-int cls_Dictionary::LoadFile( const std::string& pth )
+int cls_Dictionary::LoadFile( const std::string& pth, const bool verbose )
 {
     // (0) Open file for read
-    std::cout << std::endl << '[' << pth << ']' << std::endl;
+    if(verbose) std::cout << std::endl << '[' << pth << ']' << std::endl;
     std::ifstream fin( pth, std::ios::binary );
     if( !fin )
        {
-        std::cerr << "  Cannot read the file!\n";
+        std::cerr << "  Cannot read " << pth << "\n";
         return 1;
        }
 
@@ -512,7 +513,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
     bool fagor = (mat::tolower(ext)==".plc");
 
     // (2) Parse the file
-    EN_ENCODING enc = mat::CheckBOM( fin );
+    EN_ENCODING enc = mat::CheckBOM( fin, 0, verbose );
     // Get the rest
     if( enc==ANSI || enc==UTF8 )
          {
@@ -540,7 +541,7 @@ int cls_Dictionary::LoadFile( const std::string& pth )
     //      return Parse_H<char32_t,false>(*this, fin);
     //     }
     else {
-          std::cerr << "  Cannot handle this encoding!\n";
+          std::cerr << "  Cannot handle the encoding of " << pth << "\n";
           return 1;
          }
 } // 'LoadFile'
@@ -594,5 +595,194 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 } // 'LoadFile'
 */
 
+
+//---------------------------------------------------------------------------
+// Process a file (ANSI 8bit) tokenizing and sustituting dictionary
+// TODO 1: should manage other encodings
+// TODO 1: should manage comments basing on extension
+// TODO 3: manage inlined directives: #define, #ifdef, #else, #endif
+int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_out, const cls_Dictionary& dict, const bool overwrite, const bool verbose)
+{
+    // (0) See extension?
+    //mat::split_path(pth_in,dir,nam,ext); if( ext==".def" )...
+    if( pth_in==pth_out )
+       {
+        std::cerr << "  Same output file name! " << pth_in << std::endl;
+        return 1;
+       }
+
+    // (1) Open input file for read
+    std::cout << std::endl << ' ' << pth_in << " >> " << std::endl;
+    std::ifstream fin( pth_in, std::ios::binary );
+    if( !fin )
+       {
+        std::cerr << "  Cannot read the file!" << std::endl;
+        return 1;
+       }
+
+    // (2) Open output file for write
+    std::cout << "  >> " << pth_out << std::endl;
+    // Check overwrite flag
+    if( !overwrite )
+       {// If must not overwrite, check existance
+        std::ifstream fout(pth_out);
+        if( fout.good() )
+           {
+            std::cerr << "  Output file already existing!! (use -f to force overwrite)" << std::endl;
+            return 1;
+           }
+       }
+    std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
+    if( !fout )
+       {
+        std::cerr << "  Cannot write the output file!" << std::endl;
+        return 1;
+       }
+
+    // (3) Parse the file
+    enum{ ST_SKIPLINE, ST_SEEK, ST_COLLECT } status = ST_SEEK;
+    int n_tok=0, n_sub=0; // Number of encountered tokens and substitutions
+    int l = 1; // Current line number
+    std::string tok; // Bag for current token
+    bool skipsub = false; // Auxiliary to handle '#' for skipping substitution
+    unsigned int sqbr_opened = 0; // Auxiliary to handle square brackets in token
+    // TODO 5: should deal with encoding, now supporting just 8bit enc
+    EN_ENCODING enc = mat::CheckBOM( fin, &fout, verbose );
+    if( enc != ANSI )
+       {
+        std::cerr << "  Cannot handle this encoding!" << std::endl;
+        return 1;
+       }
+    // Get the rest
+    char c = fin.get();
+    while( c != EOF )
+       {
+        //std::cout << c << " line: " << l << " tok:" << tok << " status: " << status << '\n';
+        // According to current status
+        switch( status )
+           {
+            case ST_SKIPLINE : // Skip comment line
+                fout << c;
+                if( c=='\n' )
+                   {
+                    ++l;
+                    status = ST_SEEK;
+                   }
+                c = fin.get();
+                break;
+
+            case ST_SEEK : // Seek next token
+                if( c=='\n' )
+                     {// Detect possible line break
+                      fout << c;
+                      ++l;
+                      c=fin.get();
+                     }
+                else if( c<=' ' )
+                     {// Skip control characters
+                      fout << c;
+                      c = fin.get();
+                     }
+                else if( c=='+' || c=='-' || c=='*' || c=='=' ||
+                         c=='(' || c==')' || c=='[' || c==']' ||
+                         c=='{' || c=='}' || c=='<' || c=='>' ||
+                         c=='!' || c=='&' || c=='|' || c=='^' ||
+                         c==':' || c==',' || c=='.' ||
+                         // c!=';' || c!='/' ||  // <comment chars>
+                         c=='\'' || c=='\"' || c=='\\' ) //
+                     {// Skip operators
+                      fout << c;
+                      c = fin.get();
+                     }
+                else if( c=='/' )
+                     {// Skip division/detect c++ comment line
+                      fout << c;
+                      c = fin.get();
+                      if( c=='/' )
+                         {
+                          fout << c;
+                          c = fin.get();
+                          status = ST_SKIPLINE;
+                         }
+                     }
+                else if( c==';' )
+                     {// Skip semicolon/detect Fagor comment line
+                      fout << c;
+                      c = fin.get();
+                      status = ST_SKIPLINE;
+                     }
+                else {// Got a token: initialize status to get a new one
+                      sqbr_opened = 0;
+                      // Handle the 'no-substitution' character
+                      if( c=='#' )
+                           {
+                            skipsub = true;
+                            tok = "";
+                           }
+                      else {
+                            skipsub = false;
+                            tok = c;
+                           }
+                      c = fin.get(); // Next
+                      status = ST_COLLECT;
+                     }
+                break;
+
+            case ST_COLLECT : // Collect the rest of the token
+                // The token ends with control chars or operators
+                while( c!=EOF && c>' ' &&
+                       c!='+' && c!='-' && c!='*' && c!='=' &&
+                       c!='(' && c!=')' && // c!='[' && c!=']' && (can be part of the token)
+                       c!='{' && c!='}' && c!='<' && c!='>' &&
+                       c!='!' && c!='&' && c!='|' && c!='^' &&
+                       c!=':' && c!=',' && // c!='.' && (can be part of the token)
+                       c!=';' && c!='/' && // <comment chars>
+                       c!='\'' && c!='\"' && c!='\\' )
+                   {
+                    if(c=='[') ++sqbr_opened;
+                    else if(c==']')
+                       {
+                        if(sqbr_opened>0) --sqbr_opened;
+                        else break; // closing a not opened '['!!
+                       }
+                    // Colleziona token: dentro quadre potrei accettare solo numeri
+                    //if(sqbr_opened>0 && !std::isnumber(c)) break
+                    tok += c;
+                    c = fin.get(); // Next
+                    if( sqbr_opened==0 && c==']' ) break; // Detect square bracket close
+                   }
+
+                // Use token
+                ++n_tok;
+                // See if it's a defined macro
+                auto def = dict.find(tok);
+                if( def != dict.end() )
+                     {// Got a macro
+                      if(skipsub)
+                           {// Don't substitute, leave out the '#'
+                            fout << tok;
+                           }
+                      else {// Substitute
+                            fout << def->second;
+                            ++n_sub;
+                           }
+                     }
+                else {// Not a define, pass as it is
+                      if(skipsub) fout << '#'; // Wasn't a define, re-add the '#'
+                      fout << tok;
+                     }
+
+                // Finally
+                status = ST_SEEK;
+                break;
+
+           } // 'switch(status)'
+       } // 'while(!EOF)'
+
+    // (4) Finally
+    //fout.flush(); // Ensure to write the disk
+    std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines" << std::endl;
+    return 0;
+} // 'Process'
 
 

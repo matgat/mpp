@@ -39,7 +39,7 @@ namespace nms_Mat //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::
        }
 
     // . Functions
-    EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout =0 );
+    EN_ENCODING CheckBOM( std::istream& fin, std::ostream* fout =0, bool verbose =false );
     char32_t GetUTF8( std::istream& in ); // Extract an UTF8 character from byte stream
 
 } // 'nms_Mat' ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

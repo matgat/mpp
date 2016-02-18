@@ -31,10 +31,12 @@ class cls_Dictionary : public std::map<std::string,std::string>
     cls_Dictionary();
     //~cls_Dictionary();
 
-    int LoadFile(const std::string& pth); // Read a definition file
+    int LoadFile(const std::string& pth, const bool verbose =false); // Read a definition file
 
-    void Invert(const bool); // Invert the dictionary (can exclude numbers)
+    void Invert(const bool nonum, const bool verbose =false); // Invert the dictionary (can exclude numbers)
     void Peek(); // Debug utility
+
+    static int Process(const std::string& pth_in, const std::string& pth_out, const cls_Dictionary& dict, const bool overwrite, const bool verbose =false); // Process a file (ANSI 8bit) tokenizing and sustituting dictionary entries
 
 }; // 'cls_Dictionary'
 

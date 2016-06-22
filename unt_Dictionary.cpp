@@ -409,55 +409,149 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                 break;
 
             case ST_EXP : // Collect the macro expansion string
+               {
                 while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the expansion string
                 exp = "";
-                // The token ends with control chars or eof
-                while( c!=EOF && c>' ' )
+                std::string reg, idx;
+
+                enum{ SST_FIRSTCHAR, SST_GENERIC, SST_REGIDX, SST_BITIDX, SST_BITREG, SST_DONE } substs = SST_FIRSTCHAR;
+                // Note: the token ends with control chars or eof (c!=EOF && c>' ')
+                while( fin && substs!=SST_DONE )
                    {
-                    exp += c;
-                    get(c,fin); // Next
-                   }
+                    // According to current substatus
+                    switch( substs )
+                       {
+                        case SST_REGIDX : // Collecting register index
+                            while( c!=EOF && c>' ' )
+                               {
+                                if( std::isdigit(c) )
+                                     {
+                                      idx += c;
+                                      exp += c;
+                                      get(c,fin); // Next
+                                     }
+                                else {// Not a register
+                                      exp += c;
+                                      get(c,fin); // Next
+                                      substs = SST_GENERIC;
+                                      break;
+                                     }
+                               }
+                            if(substs==SST_REGIDX)
+                               {// Collected a Fagor register!
+                                // I'll convert this special syntax
+                                // ex. R123 ==> V.PLC.R[123]
+                                exp = "V.PLC." + reg + "[" + idx + "]";
+                                substs = SST_DONE;
+                               }
+                            break;
+
+                        case SST_BITIDX : // Collecting bit index
+                            while( c!=EOF && c>' ' )
+                               {
+                                if( std::isdigit(c) )
+                                     {
+                                      idx += c;
+                                      exp += c;
+                                      get(c,fin); // Next
+                                     }
+                                else if( c=='R' )
+                                     {// OK, now get the register index
+                                      exp += c;
+                                      get(c,fin); // Next
+                                      substs = SST_BITREG;
+                                      break;
+                                     }
+                                else {// Not a bit notation
+                                      exp += c;
+                                      get(c,fin); // Next
+                                      substs = SST_GENERIC;
+                                      break;
+                                     }
+                               }
+                            break;
+
+                        case SST_BITREG : // Collecting register of a bit notation
+                            while( c!=EOF && c>' ' )
+                               {
+                                if( std::isdigit(c) )
+                                     {
+                                      reg += c;
+                                      exp += c;
+                                      get(c,fin); // Next
+                                     }
+                                else {// Not a bit notation
+                                      exp += c;
+                                      get(c,fin); // Next
+                                      substs = SST_GENERIC;
+                                      break;
+                                     }
+                               }
+                            if(substs==SST_BITREG)
+                               {// Collected a Fagor bit notation!
+                                // I'll convert this special syntax
+                                // ex. B5R123 ==> [V.PLC.R[123]&2**5]
+                                exp = "[V.PLC.R[" + reg + "]&2**" + idx + "]";
+                                substs = SST_DONE;
+                               }
+                            break;
+
+                        case SST_GENERIC : // Collecting generic macro
+                            while( c!=EOF && c>' ' )
+                               {
+                                exp += c;
+                                get(c,fin); // Next
+                               }
+                            substs = SST_DONE;
+                            break;
+
+                        case SST_FIRSTCHAR : // See first character
+                            if( c=='M' || c=='R' || c=='I' || c=='O' )
+                                 {// Could be a Fagor register ex. M5100
+                                  reg = c;
+                                  exp += c;
+                                  get(c,fin); // Next
+                                  substs = SST_REGIDX;
+                                 }
+                            else if( c=='L' && fin.peek()=='I' )
+                                 {// Could be a 'LI' Fagor register ex. LI1
+                                  reg = "LI";
+                                  exp += c; // 'L'
+                                  get(c,fin); // Next
+                                  exp += c; // 'I'
+                                  get(c,fin); // Next
+                                  substs = SST_REGIDX;
+                                 }
+                            else if( c=='B' )
+                                 {// Could be a Fagor register bit notation ex. B5R100
+                                  exp += c;
+                                  get(c,fin); // Next
+                                  substs = SST_BITIDX;
+                                 }
+                            else if(c!=EOF && c>' ')
+                                 {// A generic string expansion ex. 21000
+                                  exp += c;
+                                  get(c,fin); // Next
+                                  substs = SST_GENERIC;
+                                 }
+                            else {// Token ended prematurely!?
+                                  if(verbose) std::cerr << "  Token ended prematurely in line " << l << '\n';
+                                  substs = SST_DONE;
+                                 }
+                            break;
+
+                        case SST_DONE : break;
+                       } // collecting expansion string
+                   } // while stream ok
+
+                // Use collected expansion string
                 if( exp.empty() )
                      {// No expansion defined!
                       ++issues;
                       std::cerr << "  No expansion defined in line " << l << '\n';
                      }
-                else {
-                      // Check special syntax for PLC resources: ([R|M|I|O])(\d+)
-                      // ex. R123 ==> V.PLC.R[123]
-                      std::string prfx;
-                      auto p = exp.find(prfx="R");
-                      // TODO 5: this is not so efficient, but more appealing to eyes
-                      if(p!=0) p = exp.find(prfx="M");
-                      if(p!=0) p = exp.find(prfx="I");
-                      if(p!=0) p = exp.find(prfx="O");
-                      if(p!=0) p = exp.find(prfx="LI");
-                      //...if(p!=0) p = exp.find(prfx="LO");
-                      if(p==0)
-                         {
-                          std::string idx = exp.substr( prfx.length() );
-                          if( mat::is_index(idx) )
-                             {
-                              exp = "V.PLC." + prfx + "[" + idx + "]";
-                             }
-                         }
-                      // Detect bit syntax:  B5R123 ==> [V.PLC.R[123]&2**5]
-                      if( exp.find("B") == 0 )
-                         {
-                          p = exp.find("R");
-                          if(p>1)
-                             {
-                              std::string bitidx = exp.substr( 1, p );
-                              if( mat::is_index(bitidx) )
-                                 {
-                                  std::string idx = exp.substr( p+1 );
-                                  exp = "V.PLC.R[" + idx + "]&2**" + bitidx;
-                                 }
-                             }
-                         }
-
-                      // Insert in dictionary
+                else {// Insert in dictionary
                       auto ins = dict.insert( cls_Dictionary::value_type( def, exp ) );
                       if( !ins.second && ins.first->second!=exp )
                          {
@@ -467,7 +561,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                       else ++n_def;
                      }
                 status = ST_ENDLINE;
-                break;
+               } break;
 
             case ST_ENDLINE : // Check the remaining after a macro definition
                 while( std::isspace(c) && c!='\n' ) get(c,fin); // Skip final spaces
@@ -517,28 +611,28 @@ int cls_Dictionary::LoadFile( const std::string& pth, const bool verbose )
     // Get the rest
     if( enc==ANSI || enc==UTF8 )
          {
-          if(fagor) return Parse_D<char>(*this, fin);
-          else return Parse_H<char>(*this, fin);
+          if(fagor) return Parse_D<char>(*this, fin, verbose);
+          else return Parse_H<char>(*this, fin, verbose);
          }
     else if( enc==UTF16_LE )
          {
-          if(fagor) return Parse_D<char16_t,true>(*this, fin);
-          return Parse_H<char16_t,true>(*this, fin);
+          if(fagor) return Parse_D<char16_t,true>(*this, fin, verbose);
+          return Parse_H<char16_t,true>(*this, fin, verbose);
          }
     else if( enc==UTF16_BE )
          {
-          if(fagor) return Parse_D<char16_t,false>(*this, fin);
-          return Parse_H<char16_t,false>(*this, fin);
+          if(fagor) return Parse_D<char16_t,false>(*this, fin, verbose);
+          return Parse_H<char16_t,false>(*this, fin, verbose);
          }
     //else if( enc==UTF32_LE )
     //     {
-    //      if(fagor) return Parse_D<char32_t,true>(*this, fin);
-    //      return Parse_H<char32_t,true>(*this, fin);
+    //      if(fagor) return Parse_D<char32_t,true>(*this, fin, verbose);
+    //      return Parse_H<char32_t,true>(*this, fin, verbose);
     //     }
     //else if( enc==UTF32_BE )
     //     {
-    //      if(fagor) return Parse_D<char32_t,false>(*this, fin);
-    //      return Parse_H<char32_t,false>(*this, fin);
+    //      if(fagor) return Parse_D<char32_t,false>(*this, fin, verbose);
+    //      return Parse_H<char32_t,false>(*this, fin, verbose);
     //     }
     else {
           std::cerr << "  Cannot handle the encoding of " << pth << "\n";
@@ -597,19 +691,25 @@ int cls_Dictionary::LoadFile( const std::string& pth )
 
 
 //---------------------------------------------------------------------------
-// Process a file (ANSI 8bit) tokenizing and sustituting dictionary
-// TODO 1: should manage other encodings
-// TODO 1: should manage comments basing on extension
+// Process a file (ANSI 8bit) tokenizing and substituting dictionary
 // TODO 3: manage inlined directives: #define, #ifdef, #else, #endif
-int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_out, const cls_Dictionary& dict, const bool overwrite, const bool verbose)
+int cls_Dictionary::Process( const std::string& pth_in,
+                             const std::string& pth_out,
+                             const cls_Dictionary& dict,
+                             const bool overwrite,
+                             const bool verbose,
+                             const char cmtchar )
 {
-    // (0) See extension?
-    //mat::split_path(pth_in,dir,nam,ext); if( ext==".def" )...
+    // (0) See file name
     if( pth_in==pth_out )
        {
         std::cerr << "  Same output file name! " << pth_in << '\n';
         return 1;
        }
+    // Check extension?
+    //std::string dir_in,nam_in,ext_in;
+    //mat::split_path(pth_in, dir_in,nam_in,ext_in);
+    //bool fagor_symb = (mat::tolower(ext_in)==".ncs");
 
     // (1) Open input file for read
     std::cout << "\n " << pth_in << " >>\n";
@@ -650,6 +750,7 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
     EN_ENCODING enc = mat::CheckBOM( fin, &fout, verbose );
     if( enc != ANSI )
        {
+        // TODO 1: should manage other encodings
         std::cerr << "  Cannot handle this encoding!\n";
         return 1;
        }
@@ -683,17 +784,6 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
                       fout << c;
                       c = fin.get();
                      }
-                else if( c=='+' || c=='-' || c=='*' || c=='=' ||
-                         c=='(' || c==')' || c=='[' || c==']' ||
-                         c=='{' || c=='}' || c=='<' || c=='>' ||
-                         c=='!' || c=='&' || c=='|' || c=='^' ||
-                         c==':' || c==',' || c=='.' ||
-                         // c!=';' || c!='/' ||  // <comment chars>
-                         c=='\'' || c=='\"' || c=='\\' ) //
-                     {// Skip operators
-                      fout << c;
-                      c = fin.get();
-                     }
                 else if( c=='/' )
                      {// Skip division/detect c++ comment line
                       fout << c;
@@ -705,11 +795,22 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
                           status = ST_SKIPLINE;
                          }
                      }
-                else if( c==';' )
-                     {// Skip semicolon/detect Fagor comment line
+                else if( c==cmtchar )
+                     {// Skip line comment char
                       fout << c;
                       c = fin.get();
                       status = ST_SKIPLINE;
+                     }
+                else if( c=='+' || c=='-' || c=='*' || c=='=' ||
+                         c=='(' || c==')' || c=='[' || c==']' ||
+                         c=='{' || c=='}' || c=='<' || c=='>' ||
+                         c=='!' || c=='&' || c=='|' || c=='^' ||
+                         c==':' || c==',' || c=='.' || c==';' ||
+                         // c!=cmtchar || c!='/' ||  // <comment chars>
+                         c=='\'' || c=='\"' || c=='\\' ) //
+                     {// Skip operators
+                      fout << c;
+                      c = fin.get();
                      }
                 else {// Got a token: initialize status to get a new one
                       sqbr_opened = 0;
@@ -735,8 +836,8 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
                        c!='(' && c!=')' && // c!='[' && c!=']' && (can be part of the token)
                        c!='{' && c!='}' && c!='<' && c!='>' &&
                        c!='!' && c!='&' && c!='|' && c!='^' &&
-                       c!=':' && c!=',' && // c!='.' && (can be part of the token)
-                       c!=';' && c!='/' && // <comment chars>
+                       c!=':' && c!=',' && c!=';' && // c!='.' && (can be part of the token)
+                       c!=cmtchar && c!='/' && // <comment chars>
                        c!='\'' && c!='\"' && c!='\\' )
                    {
                     if(c=='[') ++sqbr_opened;
@@ -745,8 +846,9 @@ int cls_Dictionary::Process(const std::string& pth_in, const std::string& pth_ou
                         if(sqbr_opened>0) --sqbr_opened;
                         else break; // closing a not opened '['!!
                        }
-                    // Colleziona token: dentro quadre potrei accettare solo numeri
-                    //if(sqbr_opened>0 && !std::isnumber(c)) break
+                    // Se dentro quadre non trovo subito un numero non è un token
+                    if(sqbr_opened>0 && !std::isdigit(fin.peek())) break;
+                    // If here, collect token new character
                     tok += c;
                     c = fin.get(); // Next
                     if( sqbr_opened==0 && c==']' ) break; // Detect square bracket close

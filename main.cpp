@@ -52,10 +52,12 @@ int main( int argc, const char* argv[] )
     // (1) Command line arguments
     bool including = false, // expected a definition file path
          getting = false,   // expected output file path
-         mapping = false;   // expected an extensions mapping string
+         mapping = false,   // expected an extensions mapping string
+         declcmtchar = false;   // expected line comment char
     bool inv = false,
          verbose = false,
          overwrite = false;
+    char cmtchar = '\x03';
     for( int i=1; i<argc; ++i )
        {
         std::string arg( argv[i] );
@@ -75,6 +77,11 @@ int main( int argc, const char* argv[] )
               else if( mapping )
                  {
                   std::cerr << "!! Expected an extmap after -m instead of: " << arg << '\n';
+                  return RET_ARGERR;
+                 }
+              else if( declcmtchar )
+                 {
+                  std::cerr << "!! Expected a line cmt char after -c instead of: " << arg << '\n';
                   return RET_ARGERR;
                  }
               // Now see the option
@@ -112,6 +119,10 @@ int main( int argc, const char* argv[] )
                    {// Force overwrite
                     verbose = true;
                    }
+              else if( arg[1]=='c' )
+                   {// Declare line comment char
+                    declcmtchar = true;
+                   }
               else {
                     std::cerr << "!! Unknown command switch " << arg << '\n';
                     std::cerr << "   Usage:\n";
@@ -121,11 +132,12 @@ int main( int argc, const char* argv[] )
                     std::cerr << "       -f: force overwrite\n";
                     std::cerr << "       -x: invert the dictionary\n";
                     std::cerr << "       -i: include definitions file\n";
+                    std::cerr << "       -c: declare line comment char\n";
                     std::cerr << "       -m: map automatic output extension\n";
                     return RET_ARGERR;
                    }
              }
-        else {// A file path
+        else {// Not a switch
               if( including )
                    {// Expected a definition file to include
                     including = false; // 'eat'
@@ -174,6 +186,15 @@ int main( int argc, const char* argv[] )
                           return RET_ARGERR;
                          }
                    }
+              else if( declcmtchar )
+                   {
+                    if( arg.length()!=1 )
+                       {
+                        std::cerr << "!! Invalid comment char " << arg << '\n';
+                        return RET_ARGERR;
+                       }
+                    cmtchar = arg[0];
+                   }
               else {
                     files.push_back( ST_PAIR{arg} );
                    }
@@ -197,6 +218,7 @@ int main( int argc, const char* argv[] )
            {
             std::string dir,nam,ext;
             mat::split_path(i.in, dir,nam,ext);
+            ext = mat::tolower(ext);
             auto e = extmap.find(ext);
             if( e!=extmap.end() )
                  {// Got a corresponding entry in mapped extension
@@ -208,7 +230,9 @@ int main( int argc, const char* argv[] )
                  }
            }
         // Perform operation
-        issues += cls_Dictionary::Process(i.in, i.out, dict, overwrite, verbose);
+        // Could manage comments basing on extension
+        //if( ext==".ncs" ) cmtchar = ';';
+        issues += cls_Dictionary::Process(i.in, i.out, dict, overwrite, verbose, cmtchar);
        } // All the input files
 
     // (3) Finally

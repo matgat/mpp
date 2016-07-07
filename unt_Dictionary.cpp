@@ -65,11 +65,11 @@ void cls_Dictionary::Invert(const bool nonum, const bool verbose)
 // Debug utility
 void cls_Dictionary::Peek()
 {
-    int max = 10;
+    int max = 200;
     for(auto i=begin(); i!=end(); ++i)
        {
         std::cout << "  " << i->first << " " << i->second << '\n';
-        if(--max<0) break;
+        if(--max<0) { std::cout << "...\n"; break; }
        }
 } // 'Peek'
 
@@ -840,14 +840,17 @@ int cls_Dictionary::Process( const std::string& pth_in,
                        c!=cmtchar && c!='/' && // <comment chars>
                        c!='\'' && c!='\"' && c!='\\' )
                    {
-                    if(c=='[') ++sqbr_opened;
+                    if(c=='[')
+                       {
+                        ++sqbr_opened;
+                        // Se dentro quadre non trovo subito un numero non è un token
+                        if( !std::isdigit(fin.peek()) ) break;
+                       }
                     else if(c==']')
                        {
                         if(sqbr_opened>0) --sqbr_opened;
                         else break; // closing a not opened '['!!
                        }
-                    // Se dentro quadre non trovo subito un numero non è un token
-                    if(sqbr_opened>0 && !std::isdigit(fin.peek())) break;
                     // If here, collect token new character
                     tok += c;
                     c = fin.get(); // Next

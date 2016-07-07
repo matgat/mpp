@@ -164,20 +164,20 @@ int main( int argc, const char* argv[] )
                           // Check uniqueness in map
                           for( const auto& e : extmap )
                              {
-                              if( e.first==ext1 )
-                                 {
-                                  std::cerr << "!! Invalid extension map " << arg << '\n';
-                                  std::cerr << "   \'" << ext1 << "\' was already mapped\n";
-                                  return RET_ARGERR;
-                                 }
-                              if( e.second==ext2 )
-                                 {
-                                  std::cerr << "!! Invalid extension map " << arg << '\n';
-                                  std::cerr << "   \'" << ext2 << "\' was already mapped\n";
-                                  return RET_ARGERR;
-                                 }
+                              //if( e.first==ext1 )
+                              //   {
+                              //    std::cerr << "!! Invalid extension map " << arg << '\n';
+                              //    std::cerr << "   \'" << ext1 << "\' was already mapped\n";
+                              //    return RET_ARGERR;
+                              //   }
+                              //if( e.second==ext2 )
+                              //   {
+                              //    std::cerr << "!! Invalid extension map " << arg << '\n';
+                              //    std::cerr << "   \'" << ext2 << "\' was already mapped as target\n";
+                              //    return RET_ARGERR;
+                              //   }
                              }
-                          // If here, insert
+                          // If here, insert/overwrite
                           extmap[ext1] = ext2;
                          }
                     else {
@@ -188,6 +188,7 @@ int main( int argc, const char* argv[] )
                    }
               else if( declcmtchar )
                    {
+                    declcmtchar = false; // 'eat'
                     if( arg.length()!=1 )
                        {
                         std::cerr << "!! Invalid comment char " << arg << '\n';

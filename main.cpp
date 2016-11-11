@@ -243,4 +243,5 @@ int main( int argc, const char* argv[] )
         return RET_PRCERR;
        }
     return RET_OK;
-} // end 'main'
+
+} // 'main'

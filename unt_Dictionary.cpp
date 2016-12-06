@@ -2,7 +2,7 @@
 #include <cassert> // 'assert'
 #include <iostream> // 'std::cerr'
 #include <fstream> // 'std::ifstream'
-#include <cctype> // 'std::isspace', 'std::isblank'
+#include <cctype> // 'std::isspace', 'std::isblank', 'std::isdigit'
 //#include <regex> // 'std::regex_iterator'
 #include "unt_PoorMansUnicode.h" // 'CheckBOM'
 #include "unt_MatUts.h" // 'mat::ToNum'

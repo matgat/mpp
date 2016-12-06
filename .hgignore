@@ -6,7 +6,7 @@ syntax: regexp
 (?i)^thumbs.db$
 
 # [C++ development]
-(?i)\.(~.*|tds|obj|dcu|dpu|dsk|local|identcache)$
+(?i)\.(~.*|tds|obj|o|dcu|dpu|dsk|local|identcache)$
 (?i)(__history)
 #(?i)out/[^/]+\.(exe|lib)$
 \b(tmp)/.*   # ignore content of any 'tmp/' folder

@@ -735,7 +735,7 @@ int cls_Dictionary::Process( const std::string& pth_in,
     std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
     if( !fout )
        {
-        std::cerr << "  Cannot write the output file!\n";
+        std::cerr << "  Cannot write the output file " << pth_out << "\n";
         return 1;
        }
 

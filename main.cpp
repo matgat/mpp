@@ -218,7 +218,7 @@ int main( int argc, const char* argv[] )
         if( i.out.empty() )
            {
             std::string dir,nam,ext;
-            mat::split_path(i.in, dir,nam,ext);
+            mat::split_path(i.in, dir, nam, ext);
             ext = mat::tolower(ext);
             auto e = extmap.find(ext);
             if( e!=extmap.end() )
@@ -234,6 +234,9 @@ int main( int argc, const char* argv[] )
         // Could manage comments basing on extension
         //if( ext==".ncs" ) cmtchar = ';';
         issues += cls_Dictionary::Process(i.in, i.out, dict, overwrite, verbose, cmtchar);
+        // Could perform other tasks basing on output extension
+        //mat::split_path(i.out, dir, nam, ext);
+        //if(ext==".fst") Mark the file as compiled, setting the DateLastModified = DateCreated
        } // All the input files
 
     // (3) Finally

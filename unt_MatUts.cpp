@@ -51,12 +51,24 @@ void nms_Mat::change_mdate( const std::string& pth )
         //std::cout << pth << " was modified on " << std::ctime(&mt) << '\n';
         std::time_t now = std::time(0);
         boost::filesystem::last_write_time( opth, now );
-        mt = boost::filesystem::last_write_time( opth );
+        //mt = boost::filesystem::last_write_time( opth );
         //std::cout << "Now the modification time is " << std::ctime(&mt) << '\n';
        }
     //else std::cerr << "Could not find file " << pth << '\n';
     else throw std::runtime_error("Could not find file: " + pth);
-}
+
+    //  WinApi solutions:
+    //  FILE_BASIC_INFO and SetFileInformationByHandle
+    //  FILETIME and SetFileTime
+    //    FILETIME ft;
+    //    // SYSTEMTIME st; ::SystemTimeToFileTime(&st, &ft);
+    //    HANDLE h = ::CreateFile(sPath, GENERIC_ALL, FILE_SHARE_READ|FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0);
+    //    if( h!=INVALID_HANDLE_VALUE )
+    //       {
+    //        BOOL ret = ::SetFileTime(h, &ft, &ft, &ft); // Use NULL in CreationTime,LastAccessTime,LastWriteTime
+    //        ::CloseHandle(h);
+    //       }
+} // 'change_mdate'
 */
 
 

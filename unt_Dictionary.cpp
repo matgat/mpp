@@ -114,7 +114,7 @@ template<> class fun_ReadChar<char32_t,true> ////////////////////////////////
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
-        in.read(buf,2);
+        in.read(buf,4);
         c = buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24); // little endian
         return in;
        }
@@ -132,7 +132,7 @@ template<> class fun_ReadChar<char32_t,false> ///////////////////////////////
        }
     inline std::istream& operator()(char32_t& c, std::istream& in)
        {
-        in.read(buf,2);
+        in.read(buf,4);
         c = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]; // big endian
         return in;
        }
@@ -202,7 +202,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
     int issues=0; // Number of issues of the parsing
     int n_def=0; // Number of encountered defines
     int l=1; // Current line number
-    std::string def,exp;
+    std::basic_string<char> def,exp;
     T c;
     get(c,fin);
     while( fin )
@@ -265,6 +265,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 while( c!=EOF && c>' ' )
                    {
                     // if(c=='/') invalid macro chars
+                    // TODO: dovrei convertirlo in UTF-8
                     def += c;
                     get(c,fin); // Next
                    }
@@ -285,6 +286,7 @@ template<typename T,bool E=true> int Parse_H(cls_Dictionary& dict, std::istream&
                 // ...or get all, until comment, EOL or EOF
                 while( c!=EOF && c>' ' )
                    {
+                    // TODO: dovrei convertirlo in UTF-8
                     exp += c;
                     get(c,fin); // Next
                    }
@@ -338,7 +340,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
     int issues=0; // Number of issues of the parsing
     int n_def=0; // Number of encountered defines
     int l=1; // Current line number
-    std::string def,exp;
+    std::string def, exp;
     T c;
     get(c,fin);
     while( fin )
@@ -607,7 +609,7 @@ int cls_Dictionary::LoadFile( const std::string& pth, const bool verbose )
     bool fagor = (mat::tolower(ext)==".plc");
 
     // (2) Parse the file
-    EN_ENCODING enc = mat::CheckBOM( fin, 0, verbose );
+    EN_ENCODING enc = mat::CheckBOM( fin, nullptr, verbose );
     // Get the rest
     if( enc==ANSI || enc==UTF8 )
          {

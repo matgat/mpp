@@ -162,21 +162,21 @@ int main( int argc, const char* argv[] )
                           std::string ext1 = mat::tolower( arg.substr(0, p) );
                           std::string ext2 = mat::tolower( arg.substr(p+1) );
                           // Check uniqueness in map
-                          for( const auto& e : extmap )
-                             {
-                              //if( e.first==ext1 )
-                              //   {
-                              //    std::cerr << "!! Invalid extension map " << arg << '\n';
-                              //    std::cerr << "   \'" << ext1 << "\' was already mapped\n";
-                              //    return RET_ARGERR;
-                              //   }
-                              //if( e.second==ext2 )
-                              //   {
-                              //    std::cerr << "!! Invalid extension map " << arg << '\n';
-                              //    std::cerr << "   \'" << ext2 << "\' was already mapped as target\n";
-                              //    return RET_ARGERR;
-                              //   }
-                             }
+                          //for( const auto& e : extmap )
+                          //   {
+                          //    if( e.first==ext1 )
+                          //       {
+                          //        std::cerr << "!! Invalid extension map " << arg << '\n';
+                          //        std::cerr << "   \'" << ext1 << "\' was already mapped\n";
+                          //        return RET_ARGERR;
+                          //       }
+                          //    if( e.second==ext2 )
+                          //       {
+                          //        std::cerr << "!! Invalid extension map " << arg << '\n';
+                          //        std::cerr << "   \'" << ext2 << "\' was already mapped as target\n";
+                          //        return RET_ARGERR;
+                          //       }
+                          //   }
                           // If here, insert/overwrite
                           extmap[ext1] = ext2;
                          }

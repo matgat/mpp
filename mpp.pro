@@ -1,5 +1,5 @@
 TEMPLATE = app
-CONFIG += c++14
+CONFIG += c++17
 CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
@@ -21,7 +21,7 @@ HEADERS += \
 
 
 # Enable args globbing in msvc (Windows)
-msvc:OBJECTS += setargv.obj
+#msvc:OBJECTS += setargv.obj
 
 #message($$QMAKESPEC)
 win32-g++ {

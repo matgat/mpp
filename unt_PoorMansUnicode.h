@@ -20,6 +20,7 @@
     DEPENDENCIES:
     ---------------------------------------------     */
     #include <string>
+    #include <cctype> // 'tolower'
 
     // . Types/Constants
     enum EN_ENCODING { ANSI, UTF8, UTF16_LE, UTF16_BE, UTF32_LE, UTF32_BE };

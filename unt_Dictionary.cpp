@@ -340,7 +340,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
     int issues=0; // Number of issues of the parsing
     int n_def=0; // Number of encountered defines
     int l=1; // Current line number
-    std::string def, exp;
+    std::basic_string<char> def, exp; // TODO: should use T, but have problems with literals
     T c;
     get(c,fin);
     while( fin )
@@ -394,7 +394,7 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
             case ST_MACRO : // Collect the define macro string
                 while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the macro string
-                def = "";
+                def.clear();
                 // The token ends with control chars or eof
                 while( c!=EOF && c>' ' )
                    {
@@ -414,8 +414,8 @@ template<typename T,bool E=true> int Parse_D(cls_Dictionary& dict, std::istream&
                {
                 while( std::isblank(c) ) get(c,fin); // Skip spaces
                 // Collect the expansion string
-                exp = "";
-                std::string reg, idx;
+                exp.clear();
+                std::basic_string<char> reg, idx; // TODO: should use T, but have problems with literals
 
                 enum{ SST_FIRSTCHAR, SST_GENERIC, SST_REGIDX, SST_BITIDX, SST_BITREG, SST_DONE } substs = SST_FIRSTCHAR;
                 // Note: the token ends with control chars or eof (c!=EOF && c>' ')

@@ -9,5 +9,7 @@
   /---------------------------------------------------\
     Versioning
   \---------------------------------------------------/
-   Hg repository is in:
-   https://matgat@bitbucket.org/matgat/mpp
+   Hg repository was in:
+   https://bitbucket.org/matgat/mpp
+   Git repository is in:
+   https://github.com/matgat/mpp.git

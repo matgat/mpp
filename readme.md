@@ -12,6 +12,7 @@ $ qtcreator mpp.pro
 ```
 
 ## Usage
+To preprocess `test.c` with `#defines` contained in `defvar.h`:
 ```
-$ mpp -i defvar.h test.txt
-``
+$ mpp -i defvar.h test.c
+```

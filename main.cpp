@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector> // Used to collect paths
 //#include <map> // Used for extensions map - already in unt_Dictionary.h
 //#include <exception>
@@ -60,7 +61,7 @@ int main( int argc, const char* argv[] )
     char cmtchar = '\x03';
     for( int i=1; i<argc; ++i )
        {
-        std::string arg( argv[i] );
+        std::string_view arg( argv[i] );
         if( arg[0] == '-' )
              {// A command switch
               // Check preesisting state

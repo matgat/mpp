@@ -1,0 +1,34 @@
+# [generic]
+*.log
+**/tmp
+
+# [c++]
+*.o
+*.obj
+*.exe
+
+# [qtcreator]
+*.pro.user
+*.stash
+debug/
+release/
+Makefile
+Makefile.Debug
+Makefile.Release
+
+# [msvc]
+*.exe.recipe
+*.iobj
+*.tlog
+*.ipch
+*.idb
+*.pdb
+*.ilk
+*.suo
+*.VC.db
+*.filters
+*.user
+
+# [specific]
+*.pll
+*.plclib

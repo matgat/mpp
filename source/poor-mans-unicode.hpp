@@ -1,9 +1,29 @@
-//#include <exception>
-#include <cassert> // 'assert'
-#include <iostream> // 'std::cerr'
-#include <fstream> // 'std::ifstream'
-//---------------------------------------------------------------------------
-#include "unt_PoorMansUnicode.h" // 'cls_Dictionary'
+#ifndef poor_mans_unicode_hpp
+#define poor_mans_unicode_hpp
+/*  ---------------------------------------------
+    A unit that collects some pityful tentatives
+    to deal with unicode encodings
+    --------------------------------------------- */
+    #include <string>
+    #include <cctype> // 'tolower'
+    //#include <cassert> // 'assert'
+    #include <iostream> // 'std::cerr'
+
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+namespace enc
+{
+
+enum EN_ENCODING { ANSI, UTF8, UTF16_LE, UTF16_BE, UTF32_LE, UTF32_BE };
+
+
+//-----------------------------------------------------------------------
+// Lowercase conversion (TODO: bad with UTF8!)
+inline std::string tolower(std::string s)
+   {
+    for(size_t i=0, imax=s.length(); i<imax; ++i) s[i] = std::tolower(s[i]);
+    return s;
+   }
 
 
 //---------------------------------------------------------------------------
@@ -14,7 +34,7 @@
 //                       | UTF-16 (LE)  | FF FE       | ÿþ    |
 //                       | UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
 //                       | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
-EN_ENCODING nms_Mat::CheckBOM( std::istream& fin, std::ostream* fout, bool verbose )
+EN_ENCODING check_bom( std::istream& fin, std::ostream* fout, bool verbose )
 {
     char c;
     // See first byte
@@ -134,25 +154,24 @@ EN_ENCODING nms_Mat::CheckBOM( std::istream& fin, std::ostream* fout, bool verbo
     // If here, no BOM detected
     fin.unget(); // Put back the last byte read
     return ANSI;
-} // 'CheckBOM'
-
+}
 
 
 
 //---------------------------------------------------------------------------
 // Extract an UTF8 character from byte stream
-char32_t nms_Mat::GetUTF8( std::istream& in )
+char32_t get_utf8( std::istream& in )
 {
     //static_assert( sizeof(char32_t)>=4, "" ); // #include <type_traits>?
     unsigned char c;
-    if( in>>c )
+    if( in >> c )
        {
         if( c<0x80 )
            {// 1-byte code
             return c;
            }
         else if( c<0xC0 )
-           { // invalid!
+           {// invalid!
             return U'?';
            }
         else if( c<0xE0 )
@@ -177,72 +196,121 @@ char32_t nms_Mat::GetUTF8( std::istream& in )
             return c_utf8;
            }
        }
-    return EOF;
-} // 'GetUTF8'
-
-
-
-/*
-    std::ifstream ifs("input.data");
-    ifs.imbue(std::locale(std::locale(), new tick_is_space()));
-*/
-
-
-
-/*
-
-#include <iostream>
-#include <string>
-#include <locale>
-std::string Convert(std::string& str)
-{
-    std::locale settings;
-    std::string converted;
-
-    for(short i = 0; i < str.size(); ++i)
-        converted += (std::toupper(str[i], settings));
-
-    return converted;
-}
-int main()
-{
-    std::string parameter = "lowercase";
-    std::cout << Convert(parameter);
-    std::cin.ignore();
-    return 0;
+    return std::char_traits<char32_t>::eof();
 }
 
 
-// tolower example (C++)
-#include <iostream>       // std::cout
-#include <string>         // std::string
-#include <locale>         // std::locale, std::tolower
-int main ()
+
+/////////////////////////////////////////////////////////////////////////////
+// A function object that read a char from byte stream
+template<typename T,bool E=true> class ReadChar
 {
-  std::locale loc;
-  std::string str="Test String.\n";
-  for (std::string::size_type i=0; i<str.length(); ++i)
-    std::cout << std::tolower(str[i],loc);
-  return 0;
-}
+ public:
+    std::istream& operator()(T& c, std::istream& in) const
+       {
+        in.read(buf,bufsiz);
+        //const std::streamsize n_read = in ? bufsiz : in.gcount();
+        if(!in)
+           {// Could not real all bytes
+            c = std::char_traits<T>::eof();
+           }
+        else if(E)
+           {// Little endian
+            c = buf[0];
+            for(int i=1; i<bufsiz; ++i) c |= buf[i] << (8*i);
+           }
+        else
+           {// Big endian
+            const std::size_t imax = bufsiz-1;
+            for(std::size_t i=0; i<imax; ++i) c |= buf[i] << (8*(imax-i));
+            c |= buf[imax];
+           }
+        return in;
+       }
 
+ private:
+    constexpr std::size_t bufsiz = sizeof(T);
+    mutable unsigned char buf[bufsiz];
+};
 
-#include <iostream>
-#include <clocale>
-#include <cwctype>
-#include <cstdlib>
-int main()
+/////////////////////////////////////////////////////////////////////////////
+// Specialization for 32bit chars little endian
+template<> class ReadChar<char32_t,true>
 {
-    std::setlocale(LC_ALL, "en_US.utf8");
+ public:
+    std::istream& operator()(char32_t& c, std::istream& in)
+       {
+        in.read(buf,4);
+        c = buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24); // little endian
+        return in;
+       }
 
-    char utf8[] = {'\xc3', '\x81'};
-    wchar_t big;
-    std::mbtowc(&big, utf8, sizeof utf8);
-    // or just skip the whole utf8 conversion
-    //    wchar_t big = L'Á';
-    wchar_t small = std::towlower(big);
-    std::wcout << "Big: " << big  << '\n'
-               << "Small: " << small << '\n';
-}
+ private:
+    mutable char buf[4];
+};
 
-*/
+/////////////////////////////////////////////////////////////////////////////
+// Specialization for 32bit chars big endian
+template<> class ReadChar<char32_t,false>
+{
+ public:
+    std::istream& operator()(char32_t& c, std::istream& in)
+       {
+        in.read(buf,4);
+        c = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3]; // big endian
+        return in;
+       }
+
+ private:
+    mutable char buf[4];
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// Specialization for 16bit chars little endian
+template<> class ReadChar<char16_t,true>
+{
+ public:
+    std::istream& operator()(char16_t& c, std::istream& in)
+       {
+        in.read(buf,2);
+        c = buf[0] | (buf[1] << 8); // little endian
+        return in;
+       }
+
+ private:
+    mutable char buf[2];
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// Specialization for 16bit chars big endian
+template<> class ReadChar<char16_t,false>
+{
+ public:
+    std::istream& operator()(char16_t& c, std::istream& in)
+       {
+        in.read(buf,2);
+        c = (buf[0] << 8) | buf[1]; // big endian
+        return in;
+       }
+
+ private:
+    mutable char buf[2];
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// Specialization for 8bit chars
+template<> class ReadChar<char>
+{
+ public:
+    std::istream& operator()(char& c, std::istream& in)
+       {
+        return in.get(c);
+       }
+};
+
+}//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
+//---- end unit -------------------------------------------------------------
+#endif

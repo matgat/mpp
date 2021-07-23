@@ -8,7 +8,6 @@ Simple macro expansion tool written with maximum speed in mind
 ## Build
 ```
 $ git clone https://github.com/matgat/mpp.git
-$ qtcreator mpp.pro
 ```
 
 ## Usage

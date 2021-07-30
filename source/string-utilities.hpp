@@ -16,23 +16,16 @@
 namespace str //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 {
 
-//---------------------------------------------------------------------------
-// Change string to lowercase
-//void tolower(std::string& s)
-//{
-//    for(char& c : s) c = std::tolower(c);
-//}
 
 //---------------------------------------------------------------------------
 // Change string to lowercase
-std::string tolower(std::string s)
+inline std::string tolower(std::string s)
 {
     for(char& c : s) c = static_cast<char>(std::tolower(c));
     // With c++20 ranges:
     //s |= action::transform([](unsigned char c){ return std::tolower(c); });
     return s;
 }
-
 
 
 //---------------------------------------------------------------------------

@@ -45,12 +45,11 @@ namespace sys //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 {
 
 //---------------------------------------------------------------------------
-// Format system error message
-std::string replace_extension( const std::string& pth, std::string newext ) noexcept
-{
-    const std::string::size_type i_extpos = pth.rfind('.'); // std::string::npos
-    return newext = pth.substr(0,i_extpos) + newext;
-}
+//std::string replace_extension( const std::string& pth, std::string newext ) noexcept
+//{
+//    const std::string::size_type i_extpos = pth.rfind('.'); // std::string::npos
+//    return newext = pth.substr(0,i_extpos) + newext;
+//}
 
 
 //---------------------------------------------------------------------------
@@ -98,7 +97,7 @@ std::string get_lasterr_msg(DWORD e =0) noexcept
                                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                                  buf,
                                  buf_siz,
-                                 nullptr);
+                                 nullptr );
     std::string msg( "[" + std::to_string(e) + "]" );
     if(siz>0) msg += " " + std::string(buf, siz);
     return msg;

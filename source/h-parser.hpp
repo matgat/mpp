@@ -9,12 +9,12 @@
 
     DEPENDENCIES:
     --------------------------------------------- */
+    #include "logging.hpp" // 'dlg::parse_error', 'dlg::error', 'DBGLOG', 'fmt::format'
+    #include "poor-mans-unicode.hpp" // 'enc::Bom'
+    #include "string-utilities.hpp" // 'str::escape'
     #include <string_view>
     #include <stdexcept> // 'std::exception', 'std::runtime_error', ...
     #include <cctype> // 'std::isdigit', 'std::isblank', ...
-    #include "string-utilities.hpp" // 'str::escape'
-    #include "plc-elements.hpp"
-    #include "logging.hpp" // 'dlg::parse_error', 'dlg::error', 'DBGLOG', 'fmt::format'
 
 using namespace std::literals; // Use "..."sv
 
@@ -25,7 +25,7 @@ namespace h //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Descriptor of a '#define' entry
+// Descriptor of a '#define' entry in buffer
 class Define ////////////////////////////////////////////////////////////////
 {
  public:
@@ -57,15 +57,15 @@ class Define ////////////////////////////////////////////////////////////////
 
 //---------------------------------------------------------------------------
 // Parse h file
-void parse(const std::string_view buf, plc::Library& lib, std::vector<std::string>& issues, const bool fussy =true)
+void parse(const std::string_view buf, Defines& defs, std::vector<std::string>& issues, const bool fussy)
 {
-    // Check possible BOM    |  Encoding    |   Bytes     | Chars |
-    //                       |--------------|-------------|-------|
-    //                       | UTF-8        | EF BB BF    | ï»¿   |
-    //                       | UTF-16 (BE)  | FE FF       | þÿ    |
-    //                       | UTF-16 (LE)  | FF FE       | ÿþ    |
-    //                       | UTF-32 (BE)  | 00 00 FE FF | ..þÿ  |
-    //                       | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
+    std::size_t i = 0; // Current character
+
+   {// Check BOM
+    const enc::Bom bom(buf, i);
+    if( !bom.is_ansi() && !bom.is_utf8() ) throw std::runtime_error("Bad encoding, not UTF-8");
+   }
+
     const std::size_t siz = buf.size();
     if( siz < 2 )
        {
@@ -79,11 +79,8 @@ void parse(const std::string_view buf, plc::Library& lib, std::vector<std::strin
             return;
            }
        }
-    // Mi accontento di intercettare UTF-16
-    if( buf[0]=='\xFF' || buf[0]=='\xFE' ) throw std::runtime_error("Bad encoding, not UTF-8");
 
     std::size_t line = 1; // Current line number
-    std::size_t i = 0; // Current character
 
     //---------------------------------
     auto notify_error = [&](const std::string_view msg, auto... args)
@@ -266,7 +263,6 @@ void parse(const std::string_view buf, plc::Library& lib, std::vector<std::strin
        };
 
 
-    std::vector<Define> defines;
     try{
         while( i<siz )
            {
@@ -277,7 +273,7 @@ void parse(const std::string_view buf, plc::Library& lib, std::vector<std::strin
             else if( eat_line_end() ) continue; // An empty line
             else if( eat_token("#define"sv) )
                {
-                defines.push_back( collect_define() );
+                defs.push_back( collect_define() );
                }
             else
                {
@@ -288,32 +284,6 @@ void parse(const std::string_view buf, plc::Library& lib, std::vector<std::strin
     catch(std::exception& e)
        {
         throw dlg::parse_error(e.what(), line, i);
-       }
-
-
-    // Now I'll convert the suitable defines to pll::variable
-    if( !defines.empty() )
-       {
-        lib.global_variables().groups().emplace_back();
-        lib.global_variables().groups().back().set_name("Header_Variables");
-        lib.global_constants().groups().emplace_back();
-        lib.global_constants().>groups().back().set_name("Header_Constants");
-        for( const auto& def : defines )
-           {
-            // LABEL       0  // [INT] Descr
-            // vnName     vn1782  // descr [unit]
-            
-            //  vaProjName     AT %MB700.0    : STRING[ 80 ]; {DE:"va0    - Nome progetto caricato !HMI!"}
-            //  vbHeartBeat    AT %MB300.2    : BOOL;         {DE:"vb2    - Battito di vita ogni secondo"}
-            //  vnAlgn_Seq     AT %MW400.860  : INT;          {DE:"vn860  - Stato/risultato sequenze riscontri 'ID_ALGN'"}
-            //  vqProd_X       AT %MD500.977  : DINT;         {DE:"vq977  - Posizione bordo avanti del prodotto [mm]"}
-            //  vdPlcScanTime  AT %ML600.0    : LREAL;        {DE:"vd0    - Tempo di scansione del PLC [s]"}
-            //  vdJobDate      AT %ML600.253  : LREAL;        {DE:"vd253  - Timestamp of last job start"}
-            // RET_ABORTED        : INT := -1; { DE:"Return: Program not completed" }
-            // NO_POS_UM          : DINT := 999999999; { DE:"Invalid quote [um]" }
-            // BIT_CHS_CANTSTART  : UINT := 8192; { DE:"Stato Ch bit13: impossibile avviare il ciclo automatico per allarmi presenti o CMDA richiesto non attivo" }
-            // SW_VER             : LREAL := 23.90; { DE:"Versione delle definizioni" }
-           }
        }
 }
 

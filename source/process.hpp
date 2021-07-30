@@ -4,6 +4,7 @@
     Process a file tokenizing and substituting
     dictionary
     --------------------------------------------- */
+    #include "system.hpp" // 'sys::', 'fs::'
     #include <string>
     #include <map>
     #include <fstream> // 'std::ifstream'
@@ -17,14 +18,12 @@ int process( const std::string& pth_in,
              const std::string& pth_out,
              const std::map<std::string,std::string>& dict,
              const bool overwrite,
-             const bool verbose,
-             const char cmtchar )
+             const bool verbose )
 {
     // (0) See file name
     if( pth_in==pth_out )
        {
-        std::cerr << "  Same output file name! " << pth_in << '\n';
-        return 1;
+        notify_error("Same output file name {}", pth_in);
        }
     // Check extension?
     //std::string dir_in,nam_in,ext_in;
@@ -36,27 +35,28 @@ int process( const std::string& pth_in,
     std::ifstream fin( pth_in, std::ios::binary );
     if( !fin )
        {
-        std::cerr << "  Cannot read the file!\n";
-        return 1;
+        notify_error("Cannot read the file {}", pth_in);
        }
 
     // (2) Open output file for write
     std::cout << "  >> " << pth_out << '\n';
     // Check overwrite flag
-    if( !overwrite )
+    if( !overwrite && fs::exists(pth_out) )
        {// If must not overwrite, check existance
         std::ifstream fout(pth_out);
         if( fout.good() )
            {
-            std::cerr << "  Output file already existing!! (use -f to force overwrite)\n";
-            return 1;
+            notify_error("Output file already existing (use -f to force overwrite)");
            }
        }
+
+    //sys::file_write of( pth_out );
+    //of << ...;
+
     std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
     if( !fout )
        {
-        std::cerr << "  Cannot write the output file " << pth_out << "\n";
-        return 1;
+        notify_error("Cannot write to {}", pth_out);
        }
 
     // (3) Parse the file
@@ -67,11 +67,11 @@ int process( const std::string& pth_in,
     bool skipsub = false; // Auxiliary to handle '#' for skipping substitution
     unsigned int sqbr_opened = 0; // Auxiliary to handle square brackets in token
     // TODO 5: should deal with encoding, now supporting just 8bit
-    if( enc::check_bom(fin, &fout, verbose) != enc::ANSI )
+    enc::Bom bom(fin);
+    if( !bom.is_ansi() )
        {
         // TODO 1: should manage other encodings
-        std::cerr << "  Cannot handle this encoding!\n";
-        return 1;
+        notify_error("Cannot handle encoding {}", bom.to_str());
        }
     // Get the rest
     constexpr char eof = std::char_traits<char>::eof();
@@ -126,7 +126,6 @@ int process( const std::string& pth_in,
                          c=='{' || c=='}' || c=='<' || c=='>' ||
                          c=='!' || c=='&' || c=='|' || c=='^' ||
                          c==':' || c==',' || c=='.' || c==';' ||
-                         // c!=cmtchar || c!='/' ||  // <comment chars>
                          c=='\'' || c=='\"' || c=='\\' ) //
                      {// Skip operators
                       fout << c;
@@ -157,7 +156,7 @@ int process( const std::string& pth_in,
                        c!='{' && c!='}' && c!='<' && c!='>' &&
                        c!='!' && c!='&' && c!='|' && c!='^' &&
                        c!=':' && c!=',' && c!=';' && // c!='.' && (can be part of the token)
-                       c!=cmtchar && c!='/' && // <comment chars>
+                       c!='/' && // <comment chars>
                        c!='\'' && c!='\"' && c!='\\' )
                    {
                     if(c=='[')

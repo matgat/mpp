@@ -103,7 +103,7 @@ class Arguments
                         break;
 
                     case STS::GET_MAP :
-                        status = STS::SEE_ARG;    
+                        status = STS::SEE_ARG;
                         if( std::string::size_type p = arg.find('=');
                             p!=std::string::npos && arg[0]=='.' )
                            {
@@ -187,7 +187,8 @@ int main( int argc, const char* argv[] )
             if( args.verbose() ) std::cout << "Adding to dict: " << def_pth << '\n';
             std::vector<std::string> parse_issues;
             dict.load_file(def_pth, parse_issues);
-            
+            if( args.verbose() ) std::cout << "    dict: " << dict.to_str() << '\n';
+
             if( !parse_issues.empty() )
                {
                 n_issues += parse_issues.size();
@@ -213,32 +214,46 @@ int main( int argc, const char* argv[] )
             if( args.verbose() ) std::cout << "Dictionary ready (" << dict.size() << " entries)\n";
            }
       #ifdef _DEBUG
-        if( args.verbose() ) std::cout << dict;
+        // Peek dictionary content
+        if( args.verbose() )
+           {
+            std::size_type i = 0;
+            for( const auto& [key, value]: obj.i_map )
+               {
+                os << "    <define> " << key << "=" << value << '\n';
+                if( i++ > 10 )
+                   {
+                    os << "...\n";
+                    break;
+                   }
+               }
+           }
       #endif
 
         // Process files
         std::size_t n_issues = 0;
         for( auto& [in_pth,out_pth] : args.paths_pairs() )
            {
+            const std::string ext {str::tolower(in_file_path.extension().string())};
+
             if( out_pth.empty() )
                {// Must build the output file name
-                in_pth
-                ext = enc::tolower(ext);
-                auto e = extmap.find(ext);
-                if( e!=extmap.end() )
+                const auto& exts_map = args.outexts_map();
+                auto ie = exts_map.find(ext);
+                if( ie!=exts_map.end() )
                    {// Got a corresponding entry in mapped extension
-                    out_pth = dir + nam + e->second;
+                    //out_pth=in_pth; out_pth.replace_extension(ie->second);
+                    out_pth = in_pth.parent_path() / in_pth.stem() / ie->second;
                    }
                 else
                    {// Inventing the transformed file name
-                    //i->out = i->in + ".~";
-                    out_pth = dir + "~" + nam + ext;
+                    out_pth = in_pth.parent_path() / "~" + in_pth.filename();
                    }
                }
             // Perform operation
             n_issues += process(in_pth, out_pth, dict, args.overwrite());
             //if(ext==".fst") Mark the file as compiled, setting the DateLastModified = DateCreated
-           } // All the input files
+           }
 
         if( n_issues>0 )
            {

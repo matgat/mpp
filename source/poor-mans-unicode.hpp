@@ -28,16 +28,20 @@ class Bom //                           | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
     enum EN_ENCODING { ANSI, UTF8, UTF16_LE, UTF16_BE, UTF32_LE, UTF32_BE };
 
  public:
-    explicit Bom( const std::string_view buf, std::size_t& i ) noexcept { retrieve(buf, i); }
+    explicit Bom( const std::string_view buf, std::size_t& i ) noexcept
+       {
+        retrieve(buf, i);
+       }
 
     explicit Bom( std::istream& is )
        {
-        std::size_t pos = is.tellg(); // should be zero
+        const std::size_t pos = is.tellg(); // should be zero
+        static_assert(pos==0,"BOM should be checked at start of stream");
         char buf[4];
         is.read(buf,4);
         std::size_t i = 0;
         retrieve(std::string_view(buf, is.gcount()), i);
-        is.seekg(pos+i); // Eat possible BOM
+        is.seekg(pos+i); // Eat possible retrieved BOM
        }
 
     bool is_ansi() const noexcept { return i_enc==ANSI; }
@@ -191,7 +195,7 @@ class Bom //                           | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
 
 
 
-/*
+
 // Character getter
 //    enc::ReadChar<true,char16_t> get; // utf-16 le
 //    char16_t c; std::istream is;
@@ -273,7 +277,7 @@ template<> class ReadChar<false,char>
         return is.get(c);
        }
 };
-*/
+
 
 
 

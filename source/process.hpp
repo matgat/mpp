@@ -17,62 +17,40 @@
 int process( const std::string& pth_in,
              const std::string& pth_out,
              const std::map<std::string,std::string>& dict,
-             const bool overwrite,
-             const bool verbose )
+             const bool overwrite )
 {
-    // (0) See file name
-    if( pth_in==pth_out )
+    // Meglio evitare di sovrascrivere il file di input
+    if( std::error_code ec;
+        fs::equivalent(pth_in, pth_out, ec) )
        {
-        notify_error("Same output file name {}", pth_in);
+        throw dlg::error("Wont overwrite input {}", pth_in);
        }
-    // Check extension?
-    //std::string dir_in,nam_in,ext_in;
-    //mat::split_path(pth_in, dir_in,nam_in,ext_in);
-    //bool fagor_symb = (enc::tolower(ext_in)==".ncs");
 
-    // (1) Open input file for read
-    std::cout << "\n " << pth_in << " >>\n";
+    // Open input file for read
     std::ifstream fin( pth_in, std::ios::binary );
-    if( !fin )
-       {
-        notify_error("Cannot read the file {}", pth_in);
-       }
+    if( !fin ) throw dlg::error("Cannot read the file {}", pth_in);
+    //sys::MemoryMappedFile in_buf( pth.string() );
+    //in_buf.as_string_view()
 
-    // (2) Open output file for write
-    std::cout << "  >> " << pth_out << '\n';
-    // Check overwrite flag
-    if( !overwrite && fs::exists(pth_out) )
-       {// If must not overwrite, check existance
-        std::ifstream fout(pth_out);
-        if( fout.good() )
-           {
-            notify_error("Output file already existing (use -f to force overwrite)");
-           }
-       }
-
+    // Open output file for write
+    if( !overwrite && fs::exists(pth_out) ) throw dlg::error("Output file already existing (use -f to force overwrite)");
+    std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
+    if( !fout ) throw dlg::error("Cannot write to {}", pth_out);
     //sys::file_write of( pth_out );
     //of << ...;
 
-    std::ofstream fout( pth_out, std::ios::binary ); // Overwrite
-    if( !fout )
-       {
-        notify_error("Cannot write to {}", pth_out);
-       }
-
-    // (3) Parse the file
+    // Parse the input file
     enum{ ST_SKIPLINE, ST_SEEK, ST_COLLECT } status = ST_SEEK;
     int n_tok=0, n_sub=0; // Number of encountered tokens and substitutions
     int l = 1; // Current line number
     std::string tok; // Bag for current token
     bool skipsub = false; // Auxiliary to handle '#' for skipping substitution
     unsigned int sqbr_opened = 0; // Auxiliary to handle square brackets in token
-    // TODO 5: should deal with encoding, now supporting just 8bit
+
+    // TODO 5: Should deal with encoding, now supporting just 8bit
     enc::Bom bom(fin);
-    if( !bom.is_ansi() )
-       {
-        // TODO 1: should manage other encodings
-        notify_error("Cannot handle encoding {}", bom.to_str());
-       }
+    if( !bom.is_ansi() ) throw dlg::error("Cannot handle encoding {}", bom.to_str());
+
     // Get the rest
     constexpr char eof = std::char_traits<char>::eof();
     char c = fin.get();
@@ -205,7 +183,7 @@ int process( const std::string& pth_in,
 
     // (4) Finally
     //fout.flush(); // Ensure to write the disk
-    if(verbose) std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines\n";
+    //std::cout << "  Expanded " << n_sub << " macros checking a total of " << n_tok << " tokens in " << l << " lines\n";
     return 0;
 }
 

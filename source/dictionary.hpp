@@ -8,8 +8,7 @@
     #include "string-utilities.hpp" // 'str::tolower'
     #include <string>
     #include <map>
-    #include <cctype> // 'std::isdigit'
-    #include <ostream> // 'std::ostream'
+    #include <cctype> // 'std::isdigit' in 'is_num'
 
 
 
@@ -106,23 +105,6 @@ class Dictionary
        {
         return fmt::format("{} defines", size());
        }
-
-    friend std::ostream& operator<<(std::ostream& os, const T& obj)
-       {
-        size_type i = 0;
-        for( const auto& [key, value]: obj.i_map )
-           {
-            os << "  define " << key << "=" << value << '\n';
-            if( ++i > 10 )
-               {
-                std::cout << "...\n";
-                break;
-               }
-           }
-        return os;
-       }
-
-
 
     size_type size() const noexcept { return i_map.size(); }
     bool is_empty() const noexcept { return i_map.empty(); }

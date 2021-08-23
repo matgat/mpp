@@ -6,6 +6,7 @@
     DEPENDENCIES:
     --------------------------------------------- */
     #include <cctype> // 'std::isdigit', 'std::tolower', ...
+    #include <string>
     #include <string_view>
     //#include <optional>
     #include <charconv> // 'std::from_chars'

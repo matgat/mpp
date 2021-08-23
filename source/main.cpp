@@ -1,6 +1,6 @@
 /*  ---------------------------------------------
     mpp
-    ©2015-2021 matteo.gattanini@gmail.com
+    Â©2015-2021 matteo.gattanini@gmail.com
 
     OVERVIEW
     ---------------------------------------------
@@ -9,17 +9,16 @@
     DEPENDENCIES:
     --------------------------------------------- */
 #include <iostream>
-//#include <fstream>
-//#include <sstream>
 #include <string>
 #include <string_view>
-#include <vector> // Used to collect paths
-#include <map> // Used for extensions map
+#include "string-utilities.hpp" // 'str::tolower'
+#include <vector> // Collected paths
+#include <map> // File extensions mapping
 #include <stdexcept> // 'std::runtime_error'
 #include "system.hpp" // 'sys::', 'fs::'
-#include "string-utilities.hpp" // 'str::tolower'
 #include "logging.hpp" // 'dlg::error'
 #include "dictionary.hpp" // 'Dictionary'
+#include "preprocess.hpp" // 'pre::process()'
 
 using namespace std::literals; // Use "..."sv
 
@@ -79,25 +78,26 @@ class Arguments
                            }
                         else
                            {// An input file
-                            const auto globbed = sys::glob(arg);
+                            auto globbed = sys::glob(arg);
                             i_paths_pairs.reserve(i_paths_pairs.size() + globbed.size());
-                            for(const auto& pth : globbed) i_paths_pairs.emplace_back(pth);
+                            for(auto& pth : globbed)
+                               {
+                                //i_paths_pairs.emplace_back(pth);
+                                i_paths_pairs.emplace_back();
+                                i_paths_pairs.back().in = pth;
+                               }
                            }
                         break;
 
                     case STS::GET_INC :
-                        status = STS::SEE_ARG;
+                       {status = STS::SEE_ARG;
                         const auto globbed = sys::glob(arg);
                         i_defines.reserve(i_defines.size() + globbed.size());
                         i_defines.insert(i_defines.end(), globbed.begin(), globbed.end());
-                        break;
+                       } break;
 
                     case STS::GET_OUT :
-                        i_output = arg; // Expecting a path
-                        if( !fs::exists(i_output) ) throw std::invalid_argument("Output path doesn't exists: " + i_output.string());
-                        if( !fs::is_directory(i_output) ) throw std::invalid_argument("Combine to same output file not yet supported: " + i_output.string());
-                        status = STS::SEE_ARG;
-
+                        //if( fs::exists(i_output) ) throw std::invalid_argument("Output path already existing: " + i_output.string());
                         if( i_paths_pairs.empty() ) throw std::invalid_argument("Input file not specified for output " + std::string(arg));
                         i_paths_pairs.back().out = arg;
                         break;
@@ -107,8 +107,8 @@ class Arguments
                         if( std::string::size_type p = arg.find('=');
                             p!=std::string::npos && arg[0]=='.' )
                            {
-                            std::string ext1 = enc::tolower( arg.substr(0,p) );
-                            std::string ext2 = enc::tolower( arg.substr(p+1) );
+                            std::string ext1 = str::tolower( std::string(arg.substr(0,p)) );
+                            std::string ext2 = str::tolower( std::string(arg.substr(p+1)) );
                             i_outexts_map[ext1] = ext2;
                            }
                         else
@@ -140,17 +140,32 @@ class Arguments
        }
 
     const auto& defines() const noexcept { return i_defines; }
-    const auto& paths_pairs() const noexcept { return i_paths_pairs; }
-    auto& outexts_map() const noexcept { return i_outexts_map; }
+    auto& paths_pairs() noexcept { return i_paths_pairs; }
+    const auto& outexts_map() const noexcept { return i_outexts_map; }
 
     bool verbose() const noexcept { return i_verbose; }
-    bool overwrite() const noexcept { return i_overwrite; }
-    bool invert_dict() const noexcept { return i_invert_dict; }
+    bool can_overwrite() const noexcept { return i_overwrite; }
+    bool must_invert_dict() const noexcept { return i_invert_dict; }
+
+
+    //---------------------------------------------------------------------------
+    void invert_extensions_map()
+       {
+        decltype(i_outexts_map) m_inv;
+        for( const auto& [key, value]: i_outexts_map )
+           {
+            // Handle aliases
+            if( auto has = m_inv.find(value); has!=m_inv.end() ) throw dlg::error("Cannot invert extensions, multiple values for {}", has->first);
+            m_inv[value] = key;
+           }
+        // Finally, assign the inverted map
+        i_outexts_map = m_inv;
+       }
 
 
  private:
     std::vector<fs::path> i_defines;
-    struct inout_pair_t { fs::path in,out; inout_pair_t(fs::path&& s) : in{s}{} };
+    struct inout_pair_t { fs::path in, out; };
     std::vector<inout_pair_t> i_paths_pairs;
     std::map<std::string,std::string> i_outexts_map = { {".fst", ".ncs"},
                                                         {".nc", ".ncs"}  };
@@ -160,6 +175,82 @@ class Arguments
 };
 
 
+//---------------------------------------------------------------------------
+inline void build_dictionary(Dictionary& dict, Arguments& args)
+{
+    for( const auto& def_pth : args.defines() )
+       {
+        if( args.verbose() ) std::cout << "Adding to dict: " << def_pth << '\n';
+        std::vector<std::string> parse_issues;
+        dict.load_file(def_pth, parse_issues);
+        if( args.verbose() ) std::cout << "    dict: " << dict.to_str() << '\n';
+
+        if( !parse_issues.empty() )
+           {
+            for(const std::string& issue_txt : parse_issues)
+               {
+                std::cerr << "    [!] "sv << issue_txt << '\n';
+               }
+           }
+       }
+    if( args.must_invert_dict() )
+       {
+        if( args.verbose() ) std::cout << "Inverting dictionary (" << dict.size() << " entries)\n";
+        dict.remove_numbers();
+        dict.invert();
+        if( args.verbose() ) std::cout << "Inverted dictionary (" << dict.size() << " entries)\n";
+        // Also the output file extension mapping (I'm inverting the preprocessing)
+        args.invert_extensions_map();
+       }
+    else
+       {
+        if( args.verbose() ) std::cout << "Dictionary ready (" << dict.size() << " entries)\n";
+       }
+  #ifdef _DEBUG
+    // Peek dictionary content
+    if( args.verbose() )
+       {
+        std::size_t i = 0;
+        for( const auto& [key, value]: dict )
+           {
+            std::cout << "    <define> " << key << "=" << value << '\n';
+            if( i++ > 10 )
+               {
+                std::cout << "...\n";
+                break;
+               }
+           }
+       }
+  #endif
+}
+
+//---------------------------------------------------------------------------
+inline void preprocess_files(const Dictionary& dict, Arguments& args)
+{
+    for( auto& [in_pth,out_pth] : args.paths_pairs() )
+       {
+        if( out_pth.empty() )
+           {// Must build the output file name
+            const std::string ext {str::tolower(in_pth.extension().string())};
+            const auto& exts_map = args.outexts_map();
+            auto ie = exts_map.find(ext);
+            if( ie!=exts_map.end() )
+               {// Got a corresponding entry in mapped extension
+                //out_pth=in_pth; out_pth.replace_extension(ie->second);
+                out_pth = in_pth.parent_path() / in_pth.stem() / ie->second;
+               }
+            else
+               {// Inventing the transformed file name
+                out_pth = in_pth.parent_path() / "~";
+                out_pth += in_pth.filename();
+               }
+           }
+        // Perform operation
+        auto res = pre::process(in_pth, out_pth, dict.map(), args.can_overwrite());
+        if( args.verbose() ) std::cout << "  Expanded " << res.n_sub << " macros checking a total of " << res.n_tok << " tokens in " << res.n_line << " lines\n";
+        //if(ext==".fst") Mark the file as compiled, setting the DateLastModified = DateCreated
+       }
+}
 
 
 //---------------------------------------------------------------------------
@@ -179,88 +270,12 @@ int main( int argc, const char* argv[] )
         if( args.defines().empty() ) throw std::invalid_argument("No defines passed");
         if( args.paths_pairs().empty() ) throw std::invalid_argument("No files passed");
 
-
-        // Build dictionary
         Dictionary dict;
-        for( const auto& def_pth : args.defines() )
-           {
-            if( args.verbose() ) std::cout << "Adding to dict: " << def_pth << '\n';
-            std::vector<std::string> parse_issues;
-            dict.load_file(def_pth, parse_issues);
-            if( args.verbose() ) std::cout << "    dict: " << dict.to_str() << '\n';
+        build_dictionary(dict, args);
 
-            if( !parse_issues.empty() )
-               {
-                n_issues += parse_issues.size();
+        preprocess_files(dict, args);
 
-                for(const std::string& issue_txt : parse_issues)
-                   {
-                    std::cerr << "    [!] "sv << issue_txt << '\n';
-                   }
-
-               }
-           }
-        if( args.invert_dict() )
-           {
-            if( args.verbose() ) std::cout << "Inverting dictionary (" << dict.size() << " entries)\n";
-            dict.remove_numbers();
-            dict.invert();
-            if( args.verbose() ) std::cout << "Inverted dictionary (" << dict.size() << " entries)\n";
-            // Also the output file extension mapping (I'm inverting the preprocessing)
-            invert_map( args.outexts_map() );
-           }
-        else
-           {
-            if( args.verbose() ) std::cout << "Dictionary ready (" << dict.size() << " entries)\n";
-           }
-      #ifdef _DEBUG
-        // Peek dictionary content
-        if( args.verbose() )
-           {
-            std::size_type i = 0;
-            for( const auto& [key, value]: obj.i_map )
-               {
-                os << "    <define> " << key << "=" << value << '\n';
-                if( i++ > 10 )
-                   {
-                    os << "...\n";
-                    break;
-                   }
-               }
-           }
-      #endif
-
-        // Process files
-        std::size_t n_issues = 0;
-        for( auto& [in_pth,out_pth] : args.paths_pairs() )
-           {
-            const std::string ext {str::tolower(in_file_path.extension().string())};
-
-            if( out_pth.empty() )
-               {// Must build the output file name
-                const auto& exts_map = args.outexts_map();
-                auto ie = exts_map.find(ext);
-                if( ie!=exts_map.end() )
-                   {// Got a corresponding entry in mapped extension
-                    //out_pth=in_pth; out_pth.replace_extension(ie->second);
-                    out_pth = in_pth.parent_path() / in_pth.stem() / ie->second;
-                   }
-                else
-                   {// Inventing the transformed file name
-                    out_pth = in_pth.parent_path() / "~" + in_pth.filename();
-                   }
-               }
-            // Perform operation
-            n_issues += process(in_pth, out_pth, dict, args.overwrite());
-            //if(ext==".fst") Mark the file as compiled, setting the DateLastModified = DateCreated
-           }
-
-        if( n_issues>0 )
-           {
-            std::cerr << "[!] " << n_issues << " issues found\n";
-            return -1;
-           }
-        return 0;
+        return 0; // EXIT_SUCCESS
        }
     catch(std::invalid_argument& e)
        {
@@ -271,5 +286,6 @@ int main( int argc, const char* argv[] )
        {
         std::cerr << "!! Error: " << e.what() << '\n';
        }
-    return -2;
+
+    return -1; // EXIT_FAILURE
 }

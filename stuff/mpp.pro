@@ -8,17 +8,17 @@ message(Building $$TARGET)
 INCLUDEPATH += ../source/
 VPATH += ../source/
 
-SOURCES += main.cpp \
-    unt_Dictionary.cpp \
-    unt_PoorMansUnicode.cpp \
-    unt_MatUts.cpp
-
+SOURCES += main.cpp
 
 HEADERS += \
-    system.hpp \
-    unt_Dictionary.h \
-    unt_PoorMansUnicode.h \
-    unt_MatUts.h
+    def-parser.hpp \
+    dictionary.hpp \
+    h-parser.hpp \
+    logging.hpp \
+    poor-mans-unicode.hpp \
+    preprocess.hpp \
+    string-utilities.hpp \
+    system.hpp
 
 DEFINES -= UNICODE
 win32 {

@@ -29,9 +29,24 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
     enc::ReadChar<LE,T> get;
 
     enum{ ST_SKIPLINE, ST_NEWLINE, ST_DEF, ST_MACRO, ST_EXP, ST_ENDLINE } status = ST_NEWLINE;
-    int n_def=0; // Number of encountered defines
-    int l=1; // Current line number
+    int n_def = 0; // Number of encountered defines
+    int n_line = 1; // Current line number
     std::basic_string<T> def, exp;
+    
+    //---------------------------------
+    auto notify_error = [&](const std::string_view msg, auto... args)
+       {
+        if(fussy)
+           {
+            throw dlg::error(msg, args...);
+           }
+        else
+           {
+            issues.push_back( fmt::format("{} (line {})", fmt::format(msg, args...), n_line) );
+           }
+       };
+    
+    
     constexpr T eof = std::char_traits<T>::eof();
     T c;
     get(c,is);
@@ -43,7 +58,7 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
             case ST_SKIPLINE : // Skip current line
                 if( c=='\n' )
                    {
-                    ++l;
+                    ++n_line;
                     status = ST_NEWLINE;
                    }
                 get(c,is); // Next
@@ -54,10 +69,10 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
                 // Now see what we have
                 if( c=='D' ) status = ST_DEF; // could be a 'DEF'
                 else if( c==';' ) status = ST_SKIPLINE; // A Fagor comment
-                else if( c=='\n' ) ++l; // Detect possible line break (empty line)
+                else if( c=='\n' ) ++n_line; // Detect possible line break (empty line)
                 else
                    {// Garbage
-                    throw dlg::error("Unexpected content \'{}\' in line {} (ST_NEWLINE)\n", c, l);
+                    notify_error("Unexpected content \'{}\' in line {} (ST_NEWLINE)\n", c, n_line);
                     status = ST_SKIPLINE; // Garbage, skip the line
                    }
                 get(c,is); // Next
@@ -78,7 +93,7 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
                 // Notify garbage
                 if(status==ST_SKIPLINE)
                    {// Garbage
-                    throw dlg::error("Unexpected content \'{}\' in line {} (ST_DEF)", c, l);
+                    notify_error("Unexpected content \'{}\' in line {} (ST_DEF)", c, n_line);
                    }
                 break;
 
@@ -94,7 +109,7 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
                    }
                 if( def.empty() )
                    {// No macro defined!
-                    throw dlg::error("No macro defined in line {}", l);
+                    notify_error("No macro defined in line {}", n_line);
                     status = ST_ENDLINE;
                    }
                 else status = ST_EXP;
@@ -232,7 +247,7 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
                                }
                             else
                                {// Token ended prematurely!?
-                                //if(verbose) throw dlg::error("Token ended prematurely in line {}", l);
+                                //notify_error("Token ended prematurely in line {}", n_line);
                                 substs = SST_DONE;
                                }
                             break;
@@ -243,29 +258,29 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
 
                 // Use collected expansion string
                 if( exp.empty() )
-                     {// No expansion defined!
-                      ++issues;
-                      throw dlg::error("No expansion defined in line {}", l);
-                     }
-                else {// Insert in dictionary
-                      auto ins = dict.insert( dict_t::value_type( def, exp ) );
-                      if( !ins.second && ins.first->second!=exp )
-                         {
-                          throw dlg::error("\'{}\' redefined in line {} (was \'{}\', now \'{}\')", ins.first->first, l, ins.first->second, exp);
-                         }
-                      else ++n_def;
-                     }
+                   {// No expansion defined!
+                    notify_error("No expansion defined in line {}", n_line);
+                   }
+                else
+                   {// Insert in dictionary
+                    auto ins = dict.insert(std::pair(def, exp));
+                    if( !ins.second && ins.first->second!=exp )
+                       {
+                        notify_error("\'{}\' redefined in line {} (was \'{}\', now \'{}\')", ins.first->first, n_line, ins.first->second, exp);
+                       }
+                    else ++n_def;
+                   }
                 status = ST_ENDLINE;
                } break;
 
             case ST_ENDLINE : // Check the remaining after a macro definition
                 while( std::isspace(c) && c!='\n' ) get(c,is); // Skip final spaces
                 // Now see what we have
-                if(c=='\n') { ++l; status=ST_NEWLINE; } // Detect expected line break
+                if(c=='\n') { ++n_line; status=ST_NEWLINE; } // Detect expected line break
                 else if( c==';' ) status = ST_SKIPLINE; // A comment
                 else
                    {// Garbage
-                    throw dlg::error("Unexpected content \'" << c << "\' in line " << l << " (ST_ENDLINE)\n";
+                    notify_error("Unexpected content \'{}\' in line {} (ST_ENDLINE)",c,n_line);
                     //char s[256]; is.getline(s,256); std::cerr << s << '\n';
                     status = ST_SKIPLINE; // Garbage, skip the line
                    }
@@ -274,50 +289,50 @@ template<typename T,bool LE> void parse(std::istream& is, std::map<std::string,s
 
            } // 'switch(status)'
        } // 'while(!eof)'
-    //std::cout << "Collected " << n_def << " defines in " << l << " lines, overall dict size: " << dict.size() << "\n";
+    //std::cout << "Collected " << n_def << " defines in " << n_line << " lines, overall dict size: " << dict.size() << "\n";
 }
 
 
 
-/*
+
 //---------------------------------------------------------------------------
 // Using regular expression
-void parse( const std::string& pth )
-{
-    std::regex regdef( R"(^\s*(?:#define|DEF)\s+(\S+)\s+(\S+)(?:\s+(?:;|//)\s*([^\n]+))?)" );
+//void parse( const std::string& pth )
+//{
+//    std::regex regdef( R"(^\s*(?:#define|DEF)\s+(\S+)\s+(\S+)(?:\s+(?:;|//)\s*([^\n]+))?)" );
+//
+//    // Open file for read
+//    std::ifstream is( pth );
+//    if( !is )
+//       {
+//        throw dlg::error("Cannot open {}", pth);
+//        return 1;
+//       }
+//
+//    // Scan lines
+//    std::string line;
+//    while( std::getline(is, line) )
+//       {
+//        //std::stringstream lineStream(line);
+//        //std::string token;
+//        //while(lineStream >> token) std::cout << "Token: " << token << '\n';
+//
+//        std::regex_iterator<std::string::iterator> rit ( line.begin(), line.end(), regdef ), rend;
+//        //while( rit!=rend ) { std::cout << rit->str() << '\n'; ++rit; }
+//        if( rit!=rend )
+//           {
+//            //std::cout << '\n' for(size_type i=0; i<rit->size(); ++i) std::cout << rit->str(i) << '\n';
+//            assert( rit->size()==3 );
+//            auto ins = insert( value_type( rit->str(1), rit->str(2) ) );
+//            if( !ins.second && ins.first->second!=exp )
+//               {
+//                throw dlg::error("\'{}\' redefined in line {} (was \'{}\', now \'{}\', ins.first->first, n_line, ins.first->second, rit->str(2));
+//               }
+//           }
+//       }
+//    is.close();
+//}
 
-    // Open file for read
-    std::ifstream is( pth );
-    if( !is )
-       {
-        throw dlg::error("Cannot open {}",pth);
-        return 1;
-       }
-
-    // Scan lines
-    std::string line;
-    while( std::getline(is, line) )
-       {
-        //std::stringstream lineStream(line);
-        //std::string token;
-        //while(lineStream >> token) std::cout << "Token: " << token << '\n';
-
-        std::regex_iterator<std::string::iterator> rit ( line.begin(), line.end(), regdef ), rend;
-        //while( rit!=rend ) { std::cout << rit->str() << '\n'; ++rit; }
-        if( rit!=rend )
-           {
-            //std::cout << '\n' for(size_type i=0; i<rit->size(); ++i) std::cout << rit->str(i) << '\n';
-            assert( rit->size()==3 );
-            auto ins = insert( value_type( rit->str(1), rit->str(2) ) );
-            if( !ins.second && ins.first->second!=exp )
-               {
-                throw dlg::error("\'{}\' redefined in line {} (was \'{}\', now \'{}\', ins.first->first, l, ins.first->second, rit->str(2));
-               }
-           }
-       }
-    is.close();
-}
-*/
 
 
 }//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

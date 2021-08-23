@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{3bacb7e6-9fda-476e-a31f-ac9c97d9f86f}</ProjectGuid>
+    <ProjectGuid>{0ff0525c-5f6f-4191-b541-ab09cd2f07d2}</ProjectGuid>
     <RootNamespace>mpp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -91,12 +91,21 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
+
   <ItemGroup>
     <ClCompile Include="..\source\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\source\def-parser.hpp" />
+    <ClInclude Include="..\source\dictionary.hpp" />
+    <ClInclude Include="..\source\h-parser.hpp" />
+    <ClInclude Include="..\source\logging.hpp" />
+    <ClInclude Include="..\source\poor-mans-unicode.hpp" />
+    <ClInclude Include="..\source\preprocess.hpp" />
+    <ClInclude Include="..\source\string-utilities.hpp" />
     <ClInclude Include="..\source\system.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
 </Project>

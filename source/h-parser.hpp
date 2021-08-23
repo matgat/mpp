@@ -15,6 +15,7 @@
     #include <string_view>
     #include <stdexcept> // 'std::exception', 'std::runtime_error', ...
     #include <cctype> // 'std::isdigit', 'std::isblank', ...
+    #include <vector>
 
 using namespace std::literals; // Use "..."sv
 
@@ -57,7 +58,7 @@ class Define ////////////////////////////////////////////////////////////////
 
 //---------------------------------------------------------------------------
 // Parse h file
-void parse(const std::string_view buf, Defines& defs, std::vector<std::string>& issues, const bool fussy)
+void parse(const std::string_view buf, std::vector<Define>& defs, std::vector<std::string>& issues, const bool fussy)
 {
     std::size_t i = 0; // Current character
 

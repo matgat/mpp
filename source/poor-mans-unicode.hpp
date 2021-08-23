@@ -7,6 +7,7 @@
     #include <string_view>
     #include <istream> // 'std::istream'
     #include <ostream> // 'std::ostream'
+    #include <cassert> // 'assertm'
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -36,7 +37,7 @@ class Bom //                           | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
     explicit Bom( std::istream& is )
        {
         const std::size_t pos = is.tellg(); // should be zero
-        static_assert(pos==0,"BOM should be checked at start of stream");
+        assert((pos==0) && "BOM should be checked at start of stream");
         char buf[4];
         is.read(buf,4);
         std::size_t i = 0;
@@ -54,12 +55,14 @@ class Bom //                           | UTF-32 (LE)  | FF FE 00 00 | ÿþ..  |
 
     std::string to_str() const noexcept
        {
-             if( is_ansi() )     return "ansi";
-        else if( is_utf8() )     return "utf-8";
-        else if( is_utf16_le() ) return "utf-16-le";
-        else if( is_utf16_be() ) return "utf-16-be";
-        else if( is_utf32_le() ) return "utf-32-le";
-        else if( is_utf32_be() ) return "utf-32-be";
+        using namespace std::literals; // Use "..."s
+             if( is_ansi() )     return "ansi"s;
+        else if( is_utf8() )     return "utf-8"s;
+        else if( is_utf16_le() ) return "utf-16-le"s;
+        else if( is_utf16_be() ) return "utf-16-be"s;
+        else if( is_utf32_le() ) return "utf-32-le"s;
+        else if( is_utf32_be() ) return "utf-32-be"s;
+        return "ansi"s;
        }
 
     void write_to( std::ostream& os ) const

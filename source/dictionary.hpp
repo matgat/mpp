@@ -3,12 +3,16 @@
 /*  ---------------------------------------------
     Dictionary facilities
     --------------------------------------------- */
+    #include "poor-mans-unicode.hpp" // 'enc::Bom'
+    #include "def-parser.hpp" // 'def::parse'
+    #include "h-parser.hpp" // 'h::parse'
     #include "logging.hpp" // 'dlg::error'
     #include "system.hpp" // 'sys::', 'fs::'
     #include "string-utilities.hpp" // 'str::tolower'
     #include <string>
     #include <map>
     #include <cctype> // 'std::isdigit' in 'is_num'
+    #include <fstream> // 'std::*fstream'
 
 
 
@@ -29,20 +33,21 @@ class Dictionary
     //---------------------------------------------------------------------------
     void load_file(const fs::path& pth, std::vector<std::string>& issues)
        {
+        const bool fussy = true;
         const std::string ext {str::tolower(pth.extension().string())};
         if( ext == ".plc" )
            {// That's the 'DEF' syntax used in fagor sources (// DEF macro expansion ; comment)
 
             std::ifstream is( pth, std::ios::binary );
-            if( !is ) throw dlg::error("Cannot read {}",pth);
+            if( !is ) throw dlg::error("Cannot read {}", pth.string());
 
             // Potrebbe avere varie codifiche
-            const enc::Bom bom(is);
-                 if( bom.is_utf16_le() ) def::parse<char16_t,true>(is, i_map, issues, true);
-            else if( bom.is_utf16_be() ) def::parse<char16_t,false>(is, i_map, issues, true);
-            else if( bom.is_utf32_le() ) def::parse<char32_t,true>(is, i_map, issues, true);
-            else if( bom.is_utf32_be() ) def::parse<char32_t,false>(is, i_map, issues, true);
-            else                         def::parse<char>(is, i_map, issues, true); // bom.is_ansi() || bom.is_utf8()
+            //const enc::Bom bom(is);
+            //     if( bom.is_utf16_le() ) def::parse<char16_t,true>(is, i_map, issues, fussy);
+            //else if( bom.is_utf16_be() ) def::parse<char16_t,false>(is, i_map, issues, fussy);
+            //else if( bom.is_utf32_le() ) def::parse<char32_t,true>(is, i_map, issues, fussy);
+            //else if( bom.is_utf32_be() ) def::parse<char32_t,false>(is, i_map, issues, fussy);
+            //else                         def::parse<char,false>(is, i_map, issues, fussy); // bom.is_ansi() || bom.is_utf8()
            }
         else
            {// An header file (#define macro expansion // comment)
@@ -50,14 +55,17 @@ class Dictionary
             sys::MemoryMappedFile buf( pth.string() );
 
             std::vector<h::Define> defs;
-            parse(buf.as_string_view(), defs, issues, true)
+            h::parse(buf.as_string_view(), defs, issues, fussy);
 
             // Add the defines to dictionary
-            for( const auto& def : defines )
+            for( const auto& def : defs )
                {
                 insert_unique( def.label(), def.value() );
                }
-
+            //for( auto i=defs.cbegin(); i!=defs.cend(); ++i )
+            //   {
+            //    insert_unique( i->label(), i->value() );
+            //   }
            }
        }
 
@@ -67,8 +75,8 @@ class Dictionary
         const_iterator i = i_map.begin();
         while( i != i_map.end() )
            {
-            if( is_num(i->second) ) i = i_map.erase(i);
-            else ++i
+            if (is_num(i->second)) i = i_map.erase(i);
+            else ++i;
            }
        }
 
@@ -77,9 +85,9 @@ class Dictionary
     void invert()
        {
         container_type inv_dict;
-        inv_dict.reserve( size() );
+        //inv_dict.reserve( size() );
 
-        for( const auto& [key, value]: dict )
+        for( const auto& [key, value]: i_map )
            {
             // Handle aliases, the correct one must be manually chosen
             if( auto has = inv_dict.find(value);
@@ -108,28 +116,28 @@ class Dictionary
 
     size_type size() const noexcept { return i_map.size(); }
     bool is_empty() const noexcept { return i_map.empty(); }
-    //bool has(const K& k) const noexcept { return i_map.find(k)!=i_map.end(); }
+    //bool has(const key_type& k) const noexcept { return i_map.find(k)!=i_map.end(); }
 
-    const_iterator find(const K& k) const { return i_map.find(k); }
-    iterator find(const K& k) { return i_map.find(k); }
+    const_iterator find(const key_type& k) const { return i_map.find(k); }
+    iterator find(const key_type& k) { return i_map.find(k); }
 
     // Avoiding operator[]
-    //const mapped_type& operator[](const K& k) const noexcept { return i_map[k]; }
-    //mapped_type& operator[](const K& k) noexcept { return i_map[k]; }
+    //const mapped_type& operator[](const key_type& k) const noexcept { return i_map[k]; }
+    //mapped_type& operator[](const key_type& k) noexcept { return i_map[k]; }
 
-    //const mapped_type& get(const K& k, const mapped_type& def) const
+    //const mapped_type& get(const key_type& k, const mapped_type& def) const
     //   {
     //    const_iterator i = i_map.find(k);
     //    if(i!=i_map.end()) return i->second;
     //    else return def;
     //   }
-    //const mapped_type& get(const K& k) const
+    //const mapped_type& get(const key_type& k) const
     //   {
     //    const_iterator i = i_map.find(k);
     //    if(i!=i_map.end()) return i->second;
     //    else throw dlg::error("key \'{}\' not found in dictionary", k);
     //   }
-    //mapped_type& get(const K& k)
+    //mapped_type& get(const key_type& k)
     //   {
     //    iterator i = i_map.find(k);
     //    if(i!=i_map.end()) return i->second;
@@ -141,7 +149,7 @@ class Dictionary
         std::pair<container_type::iterator,bool> ins = i_map.emplace(k,v);
         return ins.first->second;
        }
-    mapped_type& insert_if_missing(const K& k, const mapped_type& v)
+    mapped_type& insert_if_missing(const key_type& k, const mapped_type& v)
        {
         std::pair<container_type::iterator,bool> ins = i_map.insert( value_type(k,v) );
         return ins.first->second;
@@ -156,7 +164,7 @@ class Dictionary
            }
         return ins.first->second;
        }
-    mapped_type& insert_or_assign(const K& k, const mapped_type& v)
+    mapped_type& insert_or_assign(const key_type& k, const mapped_type& v)
        {
         std::pair<container_type::iterator,bool> ins = i_map.insert( value_type(k,v) );
         if( !ins.second )
@@ -188,6 +196,8 @@ class Dictionary
     iterator begin() noexcept { return i_map.begin(); }
     iterator end() noexcept { return i_map.end(); }
 
+    const container_type& map() const noexcept { return i_map; };
+
  private:
     container_type i_map;
 
@@ -204,28 +214,28 @@ class Dictionary
 
 //---------------------------------------------------------------------------
 // Invert a map
-template<typename K,typename V> void invert_map(std::map<K,V>& m, const bool strict =true)
-{
-    std::map<K,V> m_inv;
-    for( const auto& [key, value]: m )
-       {
-        // Handle aliases
-        auto has = m_inv.find(i->second);
-        if( has != m_inv.end() )
-           {// Already existing
-            if(strict) throw dlg::error("Cannot invert map, multiple values for {}",has->first);
-            //else has->second = key; // Take last instead of keeping the first
-           }
-        else
-           {
-            m_inv[value] = key;
-            //auto ins = m_inv.emplace(value, key);
-            //if( !ins.second ) throw dlg::error("Cannot invert map, \'{}\' not inserted",value);
-           }
-       }
-   // Finally, assign the inverted map
-   m = m_inv;
-}
+//template<typename K,typename V> void invert_map(std::map<K,V>& m, const bool strict)
+//{
+//    std::map<K,V> m_inv;
+//    for( const auto& [key, value]: m )
+//       {
+//        // Handle aliases
+//        auto has = m_inv.find(value);
+//        if( has != m_inv.end() )
+//           {// Already existing
+//            if(strict) throw dlg::error("Cannot invert map, multiple values for {}",has->first);
+//            //else has->second = key; // Take last instead of keeping the first
+//           }
+//        else
+//           {
+//            m_inv[value] = key;
+//            //auto ins = m_inv.emplace(value, key);
+//            //if( !ins.second ) throw dlg::error("Cannot invert map, \'{}\' not inserted",value);
+//           }
+//       }
+//   // Finally, assign the inverted map
+//   m = m_inv;
+//}
 
 
 //---- end unit -------------------------------------------------------------

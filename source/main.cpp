@@ -11,14 +11,14 @@
 #include <iostream>
 #include <string>
 #include <string_view>
-#include "string-utilities.hpp" // 'str::tolower'
-#include <vector> // Collected paths
-#include <map> // File extensions mapping
-#include <stdexcept> // 'std::runtime_error'
-#include "system.hpp" // 'sys::', 'fs::'
-#include "logging.hpp" // 'dlg::error'
-#include "dictionary.hpp" // 'Dictionary'
-#include "preprocess.hpp" // 'pre::process()'
+#include "string-utilities.hpp" // str::tolower
+#include <vector>
+#include <map>
+#include <stdexcept> // std::runtime_error
+#include "system.hpp" // sys::*, fs::*
+#include "logging.hpp" // dlg::error
+#include "dictionary.hpp" // Dictionary
+#include "preprocess.hpp" // pre::process()
 
 using namespace std::literals; // Use "..."sv
 
@@ -127,16 +127,16 @@ class Arguments
 
     static void print_usage() noexcept
        {
-        std::cerr << "   Usage:\n";
-        std::cerr << "   mpp [flags] -i <def-file1> -i <def-file2> <in-file1> -o <out-file1> <in-file2> -o <out-file2>\n";
-        std::cerr << "   mpp -x -include defvar.h \"in.nc\" -out \"out.ncs\"\n";
-        std::cerr << "   mpp -verbose -force -map .ncs=.fst -map .ncs=.nc -include defs.def *.ncs\n";
-        std::cerr << "       -i[nclude]: include definitions file\n";
-        std::cerr << "       -f[orce]: Overwrite file if existing\n";
-        std::cerr << "       -m[ap]: map automatic output extension\n";
-        std::cerr << "       -o[ut]: output file\n";
-        std::cerr << "       -v[erbose]: Print more info\n";
-        std::cerr << "       -x|-invert: Invert the dictionary\n";
+        std::cerr << "\nUsage:\n"
+                     "   mpp [flags] -i <def-file1> -i <def-file2> <in-file1> -o <out-file1> <in-file2> -o <out-file2>\n"
+                     "   mpp -x -include defvar.h \"in.nc\" -out \"out.ncs\"\n"
+                     "   mpp -verbose -force -map .ncs=.fst -map .ncs=.nc -include defs.def *.ncs\n"
+                     "       -i[nclude]: include definitions file\n"
+                     "       -f[orce]: Overwrite file if existing\n"
+                     "       -m[ap]: map automatic output extension\n"
+                     "       -o[ut]: output file\n"
+                     "       -v[erbose]: Print more info\n"
+                     "       -x|-invert: Invert the dictionary\n";
        }
 
     const auto& defines() const noexcept { return i_defines; }

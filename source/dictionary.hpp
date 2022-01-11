@@ -203,10 +203,11 @@ class Dictionary
 
     static bool is_num(const mapped_type& v) noexcept
        {
-        if( 0 >= v.length() ) return false;
+        if( v.length()<=0 ) return false;
         if( std::isdigit(v[0]) ) return true;
-        if( 1 >= v.length() ) return false;
+        if( v.length()<=1 ) return false;
         if( v[0]=='-' || v[0]=='+' || v[0]=='.' ) return std::isdigit(v[1]);
+        return false;
        }
 };
 

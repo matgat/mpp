@@ -26,6 +26,8 @@ Makefile.Release
 *.ilk
 *.suo
 *.VC.db
+*.db-*
+*.opendb
 *.filters
 *.user
 

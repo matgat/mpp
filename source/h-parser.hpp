@@ -1,21 +1,15 @@
 #ifndef h_parser_hpp
 #define h_parser_hpp
-/*  ---------------------------------------------
-    ©2021 matteo.gattanini@gmail.com
-
-    OVERVIEW
-    ---------------------------------------------
-    LogicLab 'pll' file format
-
-    DEPENDENCIES:
-    --------------------------------------------- */
-    #include "logging.hpp" // 'dlg::parse_error', 'dlg::error', 'DBGLOG', 'fmt::format'
-    #include "poor-mans-unicode.hpp" // 'enc::Bom'
-    #include "string-utilities.hpp" // 'str::escape'
-    #include <string_view>
-    #include <stdexcept> // 'std::exception', 'std::runtime_error', ...
-    #include <cctype> // 'std::isdigit', 'std::isblank', ...
-    #include <vector>
+//  ---------------------------------------------
+//  Sipro 'h' file format
+//  ---------------------------------------------
+#include "logging.hpp" // dlg::parse_error, dlg::error, DBGLOG, fmt::format
+#include "poor-mans-unicode.hpp" // enc::Bom
+#include "string-utilities.hpp" // str::escape
+#include <string_view>
+#include <stdexcept> // std::exception, std::runtime_error, ...
+#include <cctype> // std::isdigit, ...
+#include <vector>
 
 using namespace std::literals; // Use "..."sv
 
@@ -92,7 +86,7 @@ void parse(const std::string_view buf, std::vector<Define>& defs, std::vector<st
            }
         else
            {
-            issues.push_back( fmt::format("{} (line {}, offset {})", fmt::format(msg, args...), line, i) );
+            issues.push_back( fmt::format("{} (line {}, offset {})", fmt::format(fmt::runtime(msg), args...), line, i) );
            }
        };
 

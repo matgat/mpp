@@ -1,13 +1,13 @@
 #ifndef poor_mans_unicode_hpp
 #define poor_mans_unicode_hpp
-/*  ---------------------------------------------
-    A unit that collects some pityful tentatives
-    to deal with unicode encodings
-    --------------------------------------------- */
-    #include <string_view>
-    #include <istream> // std::istream
-    #include <ostream> // std::ostream
-    #include <cassert> // assertm
+//  ---------------------------------------------
+//  A unit that collects some pityful tentatives
+//  to deal with unicode encodings
+//  ---------------------------------------------
+#include <string_view>
+#include <istream> // std::istream
+#include <ostream> // std::ostream
+#include <cassert> // assertm
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

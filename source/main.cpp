@@ -1,13 +1,8 @@
-/*  ---------------------------------------------
-    mpp
-    ©2015-2021 matteo.gattanini@gmail.com
-
-    OVERVIEW
-    ---------------------------------------------
-    Simple macro expansion tool
-
-    DEPENDENCIES:
-    --------------------------------------------- */
+//  ---------------------------------------------
+//  mpp
+//  ---------------------------------------------
+//  Simple macro expansion tool
+//  ---------------------------------------------
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -155,7 +150,10 @@ class Arguments
         for( const auto& [key, value]: i_outexts_map )
            {
             // Handle aliases
-            if( auto has = m_inv.find(value); has!=m_inv.end() ) throw dlg::error("Cannot invert extensions, multiple values for {}", has->first);
+            if( auto has = m_inv.find(value); has!=m_inv.end() )
+               {
+                throw dlg::error("Cannot invert extensions, multiple values for {}", has->first);
+               }
             m_inv[value] = key;
            }
         // Finally, assign the inverted map
@@ -167,8 +165,9 @@ class Arguments
     std::vector<fs::path> i_defines;
     struct inout_pair_t { fs::path in, out; };
     std::vector<inout_pair_t> i_paths_pairs;
-    std::map<std::string,std::string> i_outexts_map = { {".fst", ".ncs"},
-                                                        {".nc", ".ncs"}  };
+    std::map<std::string,std::string> i_outexts_map;
+                                                     //= { {".fst", ".ncs"},
+                                                     //    {".nc", ".ncs"}  };
     bool i_verbose = false;
     bool i_overwrite = false;
     bool i_invert_dict = false;
@@ -263,8 +262,8 @@ int main( int argc, const char* argv[] )
 
         if( args.verbose() )
            {
-            std::cout << "**** mpp (" << __DATE__ << ") ****\n"; // sys::human_readable_time_stamp()
-            std::cout << "Running in: " << fs::current_path().string() << '\n';
+            std::cout << "mpp (" << __DATE__ << ")\n"; // sys::human_readable_time_stamp()
+            std::cout << "running in: " << fs::current_path().string() << '\n';
            }
 
         if( args.defines().empty() ) throw std::invalid_argument("No defines passed");

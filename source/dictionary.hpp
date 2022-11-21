@@ -1,18 +1,18 @@
 #ifndef dictionary_hpp
 #define dictionary_hpp
-/*  ---------------------------------------------
-    Dictionary facilities
-    --------------------------------------------- */
-    #include "poor-mans-unicode.hpp" // 'enc::Bom'
-    #include "def-parser.hpp" // 'def::parse'
-    #include "h-parser.hpp" // 'h::parse'
-    #include "logging.hpp" // 'dlg::error'
-    #include "system.hpp" // 'sys::', 'fs::'
-    #include "string-utilities.hpp" // 'str::tolower'
-    #include <string>
-    #include <map>
-    #include <cctype> // 'std::isdigit' in 'is_num'
-    #include <fstream> // 'std::*fstream'
+//  ---------------------------------------------
+//  Dictionary facilities
+//  ---------------------------------------------
+#include "poor-mans-unicode.hpp" // enc::Bom
+#include "def-parser.hpp" // def::parse
+#include "h-parser.hpp" // h::parse
+#include "logging.hpp" // dlg::error
+#include "system.hpp" // sys::*, fs::*
+#include "string-utilities.hpp" // 'str::tolower
+#include <string>
+#include <map>
+#include <cctype> // std::isdigit, ...
+#include <fstream> // std::*fstream
 
 
 
@@ -81,7 +81,7 @@ class Dictionary
        }
 
     //---------------------------------------------------------------------------
-    // Invert the dictionary (can exclude numbers)
+    // Invert the dictionary (you should exclude numbers)
     void invert()
        {
         container_type inv_dict;
@@ -96,7 +96,8 @@ class Dictionary
                 // Add a recognizable placeholder to ease the manual choose: <CHOOSE:alias1|alias2|alias3>
                 if(has->second.find("<CHOOSE:")==std::string::npos) has->second = fmt::format("<CHOOSE:{}>",has->second);
                 has->second[has->second.length()-1] = '|'; // *(has->second.rbegin()) = '|';
-                has->second += key + ">";
+                has->second += key;
+                has->second += '>';
                }
             else
                {

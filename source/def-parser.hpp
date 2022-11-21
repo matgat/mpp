@@ -1,18 +1,18 @@
 #ifndef parse_hpp
 #define parse_hpp
-/*  ---------------------------------------------
-    Parsing
-    --------------------------------------------- */
-    #include "logging.hpp" // 'dlg::parse_error', 'dlg::error', 'DBGLOG', 'fmt::format'
-    #include "poor-mans-unicode.hpp" // 'enc::Bom'
-    #include <string>
-    #include <vector>
-    #include <map>
-    #include <istream> // 'std::istream'
-    #include <cctype> // 'std::isspace', 'std::isblank', 'std::isdigit'
-    //#include <regex> // 'std::regex_iterator'
+//  ---------------------------------------------
+//  Fagor DEF format
+//  ---------------------------------------------
+#include "logging.hpp" // dlg::parse_error, dlg::error, DBGLOG, fmt::format
+#include "poor-mans-unicode.hpp" // enc::Bom
+#include <string>
+#include <vector>
+#include <map>
+#include <istream> // std::istream
+#include <cctype> // std::isspace, std::isblank, std::isdigit
+//#include <regex> // std::regex_iterator
 
-    #include <fstream> // 'std::ifstream'
+#include <fstream> // std::ifstream
 
 
 

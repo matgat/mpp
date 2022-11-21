@@ -1,19 +1,12 @@
 #ifndef logging_hpp
 #define logging_hpp
-/*  ---------------------------------------------
-    ©2021 matteo.gattanini@gmail.com
-
-    OVERVIEW
-    ---------------------------------------------
-    Logging facilities
-
-    DEPENDENCIES:
-    --------------------------------------------- */
-    //#include <format> // c++20 formatting library
-    #include <fmt/core.h>
-    #include <fmt/color.h>
-    #include <string>
-    //#include <iostream>
+//  ---------------------------------------------
+//  Logging facilities
+//  ---------------------------------------------
+//#include <format> // c++20 formatting library
+#include <fmt/core.h>
+#include <fmt/color.h>
+#include <string>
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -37,7 +30,7 @@ class error : public std::exception
 {
  public:
     template <class ... Args> explicit error(const std::string_view txt, Args... args)
-       : i_msg(fmt::format(txt, args...)) {}
+       : i_msg(fmt::format(fmt::runtime(txt), args...)) {}
     const char* what() const noexcept override { return i_msg.c_str(); } // Will probably rise a '-Wweak-vtables'
 
  private:

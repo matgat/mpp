@@ -1,43 +1,39 @@
-#ifndef system_hpp
-#define system_hpp
-/*  ---------------------------------------------
-    ©2021 matteo.gattanini@gmail.com
+#ifndef GUARD_system_hpp
+#define GUARD_system_hpp
+//  ---------------------------------------------
+//  System utilities
+//  ---------------------------------------------
+#if defined(_WIN32) || defined(_WIN64)
+  #define MS_WINDOWS 1
+#else
+  #undef MS_WINDOWS
+#endif
 
-    OVERVIEW
-    ---------------------------------------------
-    Some system utilities
-
-    DEPENDENCIES:
-    --------------------------------------------- */
-  #if defined(_WIN32) || defined(_WIN64)
-    #define MS_WINDOWS 1
-  #else
-    #undef MS_WINDOWS
-  #endif
-
-  #ifdef MS_WINDOWS
-    #include <Windows.h>
-    //#include <unistd.h> // '_stat'
-  #else
-    #include <fcntl.h> // 'open'
-    #include <sys/mman.h> // 'mmap', 'munmap'
-    #include <sys/stat.h> // 'fstat'
-    #include <unistd.h> // 'unlink'
-  #endif
-    //#include "logging.hpp" // 'dlg::print'
-    #include <string>
-    #include <string_view>
-    #include <tuple>
-    #include <stdexcept>
-    #include <cstdio> // 'std::fopen', ...
-    #include <cstdlib> // 'std::getenv'
-    //#include <fstream>
-    #include <filesystem> // 'std::filesystem'
-    namespace fs = std::filesystem;
-    //#include <chrono> // 'std::chrono::system_clock'
-    //using namespace std::chrono_literals; // 1s, 2h, ...
-    #include <ctime> // 'std::time_t', 'std::strftime'
-    #include <regex> // 'std::regex*' in 'glob'
+#ifdef MS_WINDOWS
+  #include <Windows.h>
+  //#include <unistd.h> // '_stat'
+  #include <shellapi.h> // FindExecutableA
+  #include <shlwapi.h> // AssocQueryString
+#else
+  #include <fcntl.h> // 'open'
+  #include <sys/mman.h> // 'mmap', 'munmap'
+  #include <sys/stat.h> // 'fstat'
+  #include <unistd.h> // 'unlink'
+#endif
+//#include "logging.hpp" // dlg::print
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <stdexcept>
+#include <cstdio> // std::fopen, ...
+#include <cstdlib> // std::getenv
+//#include <fstream>
+#include <filesystem> // std::filesystem
+namespace fs = std::filesystem;
+//#include <chrono> // std::chrono::system_clock
+//using namespace std::chrono_literals; // 1s, 2h, ...
+#include <ctime> // std::time_t, std::strftime
+#include <regex> // std::regex* in glob
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -424,7 +420,10 @@ std::vector<fs::path> glob(const std::string_view str_pattern)
         //return std::regex_search(pth, std::regex("*?"));
         return pth.rfind('*') != std::string::npos || pth.rfind('?') != std::string::npos;
        };
-    if( contains_wildcards(path_pattern.parent_path().string()) ) throw std::runtime_error("glob: Wildcards in directories not supported (" + path_pattern.string() + ")");
+    if( contains_wildcards(path_pattern.parent_path().string()) )
+       {
+        throw std::runtime_error("glob: Wildcards in directories not supported (" + path_pattern.string() + ")");
+       }
     //if( path_pattern.is_relative() ) path_pattern = fs::absolute(path_pattern); // Ensure absolute path?
     const fs::path parent_folder = path_pattern.parent_path().empty() ? fs::current_path() : path_pattern.parent_path();
     const std::string file_pattern = path_pattern.filename().string();

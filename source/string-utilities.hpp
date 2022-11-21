@@ -1,16 +1,14 @@
-#ifndef string_utilities_hpp
-#define string_utilities_hpp
-/*  ---------------------------------------------
-    ©2021 matteo.gattanini@gmail.com
-
-    DEPENDENCIES:
-    --------------------------------------------- */
-    #include <cctype> // 'std::isdigit', 'std::tolower', ...
-    #include <string>
-    #include <string_view>
-    //#include <optional>
-    #include <charconv> // 'std::from_chars'
-    #include "logging.hpp" // 'dlg::error'
+#ifndef GUARD_string_utilities_hpp
+#define GUARD_string_utilities_hpp
+//  ---------------------------------------------
+//  String utilities
+//  ---------------------------------------------
+#include <cctype> // std::isdigit, ...
+#include <string>
+#include <string_view>
+//#include <optional>
+#include <charconv> // std::from_chars
+#include "logging.hpp" // dlg::error
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

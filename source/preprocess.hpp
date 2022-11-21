@@ -1,14 +1,13 @@
 #ifndef preprocess_hpp
 #define preprocess_hpp
-/*  ---------------------------------------------
-    Process a file tokenizing and substituting
-    dictionary
-    --------------------------------------------- */
-    #include "system.hpp" // 'sys::', 'fs::'
-    #include <fstream> // 'std::*fstream'
-    #include <string>
-    #include <map>
-    //#include <cctype> // 'std::ispunct', 'std::iscntrl', 'std::isprint', 'std::isspace', ...
+//  ---------------------------------------------
+//  Process a file tokenizing and substituting
+//  dictionary
+//  ---------------------------------------------
+#include "system.hpp" // sys::*, fs::*
+#include <fstream> // std::*fstream
+#include <string>
+#include <map>
 
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -60,7 +59,10 @@ process_result_t process( const fs::path& pth_in,
 
     // TODO 5: Should deal with encoding, now supporting just 8bit
     enc::Bom bom(fin);
-    if( !bom.is_ansi() ) throw dlg::error("Cannot handle encoding {}", bom.to_str());
+    if( !bom.is_ansi() && !bom.is_utf8() )
+       {
+        throw dlg::error("Cannot handle encoding {}", bom.to_str());
+       }
 
     // Get the rest
     constexpr char eof = std::char_traits<char>::eof();
